@@ -216,14 +216,8 @@ export function PropostaConfigurador({
         <>
           {/* Tabela base (referência) — layout idêntico ao da proposta */}
           <section className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <div className="flex items-baseline justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                Tabela base (referência)
-              </span>
-              <span className="text-sm text-slate-500">
-                Valor de tabela{" "}
-                <b className="text-slate-800">{brl(unidade.preco_tabela)}</b>
-              </span>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+              Tabela base (referência)
             </div>
             <LinhaCond label="Entrada">{brl(base.entrada)}</LinhaCond>
             {base.reforcos.map((r, i) => (
@@ -235,7 +229,7 @@ export function PropostaConfigurador({
             <LinhaCond label={`Saldo na entrega ${cfg.entrega ? fmtMesAno(cfg.entrega) : ""}`}>
               {brl(base.saldo)}
             </LinhaCond>
-            <LinhaCond label="Total (a prazo)" total>
+            <LinhaCond label="Total" total>
               {brl(totalCondicao(base))}
             </LinhaCond>
           </section>
@@ -312,7 +306,7 @@ export function PropostaConfigurador({
               <MoneyInput value={saldo} onChange={setSaldo} className="w-full" />
             </LinhaCond>
 
-            <LinhaCond label="Preço negociável (a prazo)" total>
+            <LinhaCond label="Total da proposta" total>
               {brl(precoNegociavel)}
             </LinhaCond>
           </section>
