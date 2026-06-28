@@ -1,14 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSalvarCondicoesBase } from "../hooks/useData";
-import type { ReforcoBasePct, TabelaVenda } from "../types";
+import type { ConfigVendas, ReforcoBasePct, TabelaVenda } from "../types";
 import { MesAnoInput } from "./inputs";
+import { materializarBase } from "../lib/condicao";
+import { calcularVpl } from "../lib/vpl";
+import { hojeMes, mesesEntre } from "../lib/datas";
+
+const VREF = 100000; // valor de referência: VPL% independe do valor (tudo escala)
 
 export function CondicoesBase({
   tabela,
+  cfg,
   empId,
   podeEditar,
 }: {
   tabela: TabelaVenda;
+  cfg: ConfigVendas;
   empId: string;
   podeEditar: boolean;
 }) {
@@ -30,6 +37,29 @@ export function CondicoesBase({
   const somaReforcos = reforcos.reduce((s, r) => s + r.pct, 0);
   const mensaisPct = 100 - entrada - saldo - somaReforcos;
   const ro = !podeEditar;
+
+  // VPL da condição base como % do valor de tabela (= piso em %). Independe do valor.
+  const vplPct = useMemo(() => {
+    const t0 = cfg.inicio_vendas ?? hojeMes();
+    const b = materializarBase(VREF, {
+      ...tabela,
+      cond_entrada_pct: entrada,
+      cond_saldo_pct: saldo,
+      cond_num_parcelas: num,
+      cond_reforcos: reforcos.filter((r) => r.data && r.pct > 0),
+    });
+    const mesEntrega = cfg.entrega ? Math.max(1, mesesEntre(t0, cfg.entrega)) : num;
+    const flow = {
+      entrada: b.entrada,
+      numParcelas: b.numParcelas,
+      valorParcela: b.valorParcela,
+      reforcos: b.reforcos
+        .filter((r) => r.valor > 0)
+        .map((r) => ({ mes: Math.max(0, mesesEntre(t0, r.data)), valor: r.valor })),
+      repasse: b.saldo > 0 ? { mes: mesEntrega, valor: b.saldo } : null,
+    };
+    return (calcularVpl(flow, cfg.taxa_desconto_anual) / VREF) * 100;
+  }, [entrada, saldo, num, reforcos, cfg, tabela]);
 
   async function gravar() {
     await salvar.mutateAsync({
@@ -137,6 +167,14 @@ export function CondicoesBase({
           <span className="text-sm text-slate-600">Saldo na entrega</span>
           {pctInput(saldo, setSaldo)}
         </div>
+      </div>
+
+      <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 flex items-center justify-between">
+        <span className="text-sm text-slate-600">VPL da tabela base (piso)</span>
+        <span className="text-lg font-bold tabular-nums">
+          {vplPct.toFixed(1)}%
+          <span className="ml-1 text-xs font-normal text-slate-400">do valor de tabela</span>
+        </span>
       </div>
 
       <div className="flex items-center gap-3 mt-4">

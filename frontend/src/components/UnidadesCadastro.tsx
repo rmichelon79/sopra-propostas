@@ -7,7 +7,7 @@ import {
 } from "../hooks/useData";
 import { api } from "../api/client";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Unidade, UnidadeStatus } from "../types";
+import type { ConfigVendas, Unidade, UnidadeStatus } from "../types";
 import { MoneyInput } from "./inputs";
 import { CondicoesBase } from "./CondicoesBase";
 
@@ -43,9 +43,11 @@ const paraLinha = (u: Unidade): Linha => ({
 
 export function UnidadesCadastro({
   empId,
+  cfg,
   podeEditar,
 }: {
   empId: string;
+  cfg: ConfigVendas;
   podeEditar: boolean;
 }) {
   const qc = useQueryClient();
@@ -134,7 +136,7 @@ export function UnidadesCadastro({
         )}
       </div>
 
-      <CondicoesBase tabela={tabela} empId={empId} podeEditar={podeEditar} />
+      <CondicoesBase tabela={tabela} cfg={cfg} empId={empId} podeEditar={podeEditar} />
 
       <div className="overflow-x-auto border border-slate-200 rounded-lg">
         <table className="w-full text-sm">

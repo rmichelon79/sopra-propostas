@@ -116,7 +116,7 @@ export default function App() {
         ) : aba === "propostas" ? (
           <PropostasList onEditar={abrirParaEditar} />
         ) : aba === "unidades" ? (
-          <UnidadesCadastro empId={empId} podeEditar={podeEditar} />
+          <UnidadesCadastro empId={empId} cfg={cfg} podeEditar={podeEditar} />
         ) : (
           <RegrasCadastro empId={empId} podeEditar={podeEditar} />
         )}
