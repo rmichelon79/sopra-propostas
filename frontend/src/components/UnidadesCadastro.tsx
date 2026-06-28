@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   useCriarNovaVersao,
+  useExcluirTabela,
+  useSalvarDataTabela,
   useTabelaVigente,
   useTabelas,
   useTornarVigente,
@@ -9,7 +11,8 @@ import {
 import { api } from "../api/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ConfigVendas, Unidade, UnidadeStatus } from "../types";
-import { MoneyInput } from "./inputs";
+import { fmtMesAno } from "../lib/datas";
+import { MesAnoInput, MoneyInput } from "./inputs";
 import { CondicoesBase } from "./CondicoesBase";
 
 interface Linha {
@@ -46,16 +49,20 @@ export function UnidadesCadastro({
   empId,
   cfg,
   podeEditar,
+  isAdmin,
 }: {
   empId: string;
   cfg: ConfigVendas;
   podeEditar: boolean;
+  isAdmin: boolean;
 }) {
   const qc = useQueryClient();
   const { data: vigente } = useTabelaVigente(empId);
   const { data: tabelas } = useTabelas(empId);
   const novaVersao = useCriarNovaVersao();
   const tornarVig = useTornarVigente(empId);
+  const salvarData = useSalvarDataTabela(empId);
+  const excluir = useExcluirTabela(empId);
 
   const [selId, setSelId] = useState<string | null>(null);
   const tabela = (tabelas ?? []).find((t) => t.id === selId) ?? vigente ?? null;
@@ -118,14 +125,17 @@ export function UnidadesCadastro({
 
   async function criarVersao() {
     if (!tabela) return;
-    const desc = prompt("Descrição da nova versão da tabela (ex.: reajuste jun/2026):", "");
-    if (desc === null) return;
-    const nova = await novaVersao.mutateAsync({
-      empId,
-      descricao: desc,
-      sourceTabelaId: tabela.id, // clona da versão que está sendo vista
-    });
+    // cria já clonando a versão visível e vai direto para ela
+    const nova = await novaVersao.mutateAsync({ empId, sourceTabelaId: tabela.id });
     setSelId(nova.id);
+  }
+
+  async function excluirVersao() {
+    if (!tabela || tabela.vigente) return;
+    if (!confirm(`Excluir a versão ${tabela.versao}? As unidades dessa versão serão apagadas.`))
+      return;
+    await excluir.mutateAsync(tabela.id);
+    setSelId(null); // volta para a vigente
   }
 
   if (isLoading || !tabela)
@@ -134,7 +144,7 @@ export function UnidadesCadastro({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-base font-semibold">Tabela de unidades</h2>
           <select
             value={tabela.id}
@@ -145,10 +155,16 @@ export function UnidadesCadastro({
               <option key={t.id} value={t.id}>
                 Versão {t.versao}
                 {t.vigente ? " (vigente)" : ""}
-                {t.descricao ? ` — ${t.descricao}` : ""}
+                {t.data ? ` · ${fmtMesAno(t.data)}` : ""}
               </option>
             ))}
           </select>
+          <span className="text-xs text-slate-500">Data:</span>
+          <MesAnoInput
+            value={tabela.data}
+            disabled={!podeEditar}
+            onChange={(v) => salvarData.mutate({ tabelaId: tabela.id, data: v })}
+          />
         </div>
         {podeEditar && (
           <div className="flex items-center gap-2">
@@ -168,6 +184,15 @@ export function UnidadesCadastro({
             >
               {novaVersao.isPending ? "Criando…" : "Nova versão"}
             </button>
+            {isAdmin && !tabela.vigente && (tabelas?.length ?? 0) > 1 && (
+              <button
+                onClick={excluirVersao}
+                disabled={excluir.isPending}
+                className="px-3 py-1.5 text-sm rounded border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                Excluir versão
+              </button>
+            )}
           </div>
         )}
       </div>

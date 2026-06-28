@@ -20,6 +20,7 @@ export interface TabelaVenda {
   empreendimento_id: string;
   versao: number;
   descricao: string | null;
+  data: string | null; // data de referência da tabela (ISO)
   vigente: boolean;
   criada_em: string;
   // Condição base (padrão), em % do valor da unidade.

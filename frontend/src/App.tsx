@@ -127,7 +127,12 @@ export default function App() {
         ) : aba === "aprovacoes" ? (
           <Aprovacoes sessao={sessao} />
         ) : aba === "unidades" ? (
-          <UnidadesCadastro empId={empId} cfg={cfg} podeEditar={podeEditar} />
+          <UnidadesCadastro
+            empId={empId}
+            cfg={cfg}
+            podeEditar={podeEditar}
+            isAdmin={sessao.role === "admin"}
+          />
         ) : (
           <RegrasCadastro empId={empId} podeEditar={podeEditar} />
         )}

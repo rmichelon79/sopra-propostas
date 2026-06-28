@@ -98,11 +98,7 @@ export const api = {
 
   /** Clona uma tabela (a `source`, ou a vigente) numa nova versão vigente, com
    *  unidades e condições pré-preenchidas. */
-  async criarNovaVersao(
-    empId: string,
-    descricao: string,
-    sourceTabelaId?: string,
-  ): Promise<TabelaVenda> {
+  async criarNovaVersao(empId: string, sourceTabelaId?: string): Promise<TabelaVenda> {
     const tabelas = await api.listarTabelas(empId);
     const vigente = tabelas.find((t) => t.vigente) ?? (await api.garantirTabelaVigente(empId));
     const source = (sourceTabelaId && tabelas.find((t) => t.id === sourceTabelaId)) || vigente;
@@ -119,7 +115,6 @@ export const api = {
       .insert({
         empreendimento_id: empId,
         versao: proxima,
-        descricao,
         vigente: true,
         cond_entrada_pct: source.cond_entrada_pct,
         cond_saldo_pct: source.cond_saldo_pct,
@@ -147,6 +142,16 @@ export const api = {
       if (ins.error) fail(ins.error);
     }
     return novaTabela;
+  },
+
+  async salvarDataTabela(tabelaId: string, data: string | null): Promise<void> {
+    const { error } = await supabase.from("tabelas_venda").update({ data }).eq("id", tabelaId);
+    if (error) fail(error);
+  },
+
+  async excluirTabela(tabelaId: string): Promise<void> {
+    const { error } = await supabase.from("tabelas_venda").delete().eq("id", tabelaId);
+    if (error) fail(error);
   },
 
   /** Torna uma versão de tabela a vigente (desativa as demais do empreendimento). */

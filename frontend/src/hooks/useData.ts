@@ -49,20 +49,15 @@ export function useSalvarCondicoesBase(empId: string) {
 export function useCriarNovaVersao() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      empId,
-      descricao,
-      sourceTabelaId,
-    }: {
-      empId: string;
-      descricao: string;
-      sourceTabelaId?: string;
-    }) => api.criarNovaVersao(empId, descricao, sourceTabelaId),
-    onSuccess: (_d, v) => {
-      qc.invalidateQueries({ queryKey: ["tabela-vigente", v.empId] });
-      qc.invalidateQueries({ queryKey: ["tabelas", v.empId] });
-      qc.invalidateQueries({ queryKey: ["unidades"] });
-    },
+    mutationFn: ({ empId, sourceTabelaId }: { empId: string; sourceTabelaId?: string }) =>
+      api.criarNovaVersao(empId, sourceTabelaId),
+    // retorna a promise das invalidações → mutateAsync só resolve com os dados frescos
+    onSuccess: (_d, v) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ["tabela-vigente", v.empId] }),
+        qc.invalidateQueries({ queryKey: ["tabelas", v.empId] }),
+        qc.invalidateQueries({ queryKey: ["unidades"] }),
+      ]),
   });
 }
 
@@ -70,10 +65,36 @@ export function useTornarVigente(empId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (tabelaId: string) => api.tornarVigente(empId, tabelaId),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ["tabela-vigente", empId] }),
+        qc.invalidateQueries({ queryKey: ["tabelas", empId] }),
+      ]),
+  });
+}
+
+export function useSalvarDataTabela(empId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tabelaId, data }: { tabelaId: string; data: string | null }) =>
+      api.salvarDataTabela(tabelaId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tabela-vigente", empId] });
       qc.invalidateQueries({ queryKey: ["tabelas", empId] });
     },
+  });
+}
+
+export function useExcluirTabela(empId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tabelaId: string) => api.excluirTabela(tabelaId),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ["tabela-vigente", empId] }),
+        qc.invalidateQueries({ queryKey: ["tabelas", empId] }),
+        qc.invalidateQueries({ queryKey: ["unidades"] }),
+      ]),
   });
 }
 
