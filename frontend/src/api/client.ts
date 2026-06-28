@@ -36,19 +36,20 @@ export const api = {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) throw new Error("Sem sessão.");
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("role,nome")
-      .eq("id", user.id)
-      .maybeSingle();
+    const [{ data: prof }, { data: acc }] = await Promise.all([
+      supabase.from("profiles").select("role,nome").eq("id", user.id).maybeSingle(),
+      supabase.from("app_access").select("can_edit").eq("app", "propostas").maybeSingle(),
+    ]);
     const p = prof as { role?: string; nome?: string } | null;
     const role = p?.role ?? "viewer";
+    const canEditPropostas = (acc as { can_edit?: boolean } | null)?.can_edit === true;
     return {
       userId: user.id,
       email: user.email ?? "",
       nome: p?.nome ?? user.email ?? "",
       role,
-      aprovador: role === "admin" || role === "gestor",
+      // Gestor (altera tudo) = admin global OU can_edit em propostas; senão Vendedor (só insere)
+      aprovador: role === "admin" || canEditPropostas,
     };
   },
 
