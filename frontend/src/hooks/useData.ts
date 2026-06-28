@@ -113,3 +113,21 @@ export function useMudarStatusProposta() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["propostas"] }),
   });
 }
+
+export const useAprovacoes = (propostaId: string | null) =>
+  useQuery({
+    queryKey: ["aprovacoes", propostaId],
+    queryFn: () => api.listarAprovacoes(propostaId as string),
+    enabled: !!propostaId,
+  });
+
+export function useDecidirProposta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: Parameters<typeof api.decidirProposta>[0]) => api.decidirProposta(args),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["propostas"] });
+      qc.invalidateQueries({ queryKey: ["aprovacoes", v.propostaId] });
+    },
+  });
+}

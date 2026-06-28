@@ -123,6 +123,15 @@ export interface Proposta {
   empreendimentos?: { codigo: string } | null;
 }
 
+export interface Aprovacao {
+  id: string;
+  proposta_id: string;
+  aprovador_id: string;
+  decisao: "aprovada" | "rejeitada";
+  comentario: string | null;
+  criado_em: string;
+}
+
 export interface PropostaInput {
   unidade_id: string;
   empreendimento_id: string;

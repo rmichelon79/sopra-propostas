@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { supabase, PORTAL_URL } from "./api/supabase";
 import { DEFAULT_CONFIG } from "./api/client";
-import { useConfigVendas, useEmpreendimentos, useSessao } from "./hooks/useData";
+import { useConfigVendas, useEmpreendimentos, usePropostas, useSessao } from "./hooks/useData";
 import { UnidadesCadastro } from "./components/UnidadesCadastro";
 import { RegrasCadastro } from "./components/RegrasCadastro";
 import { PropostaConfigurador } from "./components/PropostaConfigurador";
 import { PropostasList } from "./components/PropostasList";
+import { Aprovacoes } from "./components/Aprovacoes";
 import type { Proposta } from "./types";
 
-type Aba = "nova" | "propostas" | "unidades" | "regras";
+type Aba = "nova" | "propostas" | "aprovacoes" | "unidades" | "regras";
 const LABEL: Record<Aba, string> = {
   nova: "Nova proposta",
   propostas: "Propostas",
+  aprovacoes: "Aprovações",
   unidades: "Unidades",
   regras: "Empreendimento",
 };
@@ -28,10 +30,12 @@ export default function App() {
   }, [emps, empId]);
 
   const { data: cfgData } = useConfigVendas(empId);
+  const { data: propostas } = usePropostas();
   const cfg = cfgData ?? (empId ? DEFAULT_CONFIG(empId) : null);
   const podeEditar = !!sessao?.aprovador;
+  const pendentes = (propostas ?? []).filter((p) => p.status === "em_aprovacao").length;
   const abas: Aba[] = podeEditar
-    ? ["nova", "propostas", "unidades", "regras"]
+    ? ["nova", "propostas", "aprovacoes", "unidades", "regras"]
     : ["nova", "propostas"];
 
   function trocarAba(a: Aba) {
@@ -93,6 +97,11 @@ export default function App() {
               }`}
             >
               {LABEL[a]}
+              {a === "aprovacoes" && pendentes > 0 && (
+                <span className="ml-1.5 rounded-full bg-amber-500 text-white text-xs px-1.5">
+                  {pendentes}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -115,6 +124,8 @@ export default function App() {
           />
         ) : aba === "propostas" ? (
           <PropostasList onEditar={abrirParaEditar} />
+        ) : aba === "aprovacoes" ? (
+          <Aprovacoes sessao={sessao} />
         ) : aba === "unidades" ? (
           <UnidadesCadastro empId={empId} cfg={cfg} podeEditar={podeEditar} />
         ) : (

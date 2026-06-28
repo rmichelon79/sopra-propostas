@@ -1,6 +1,7 @@
 // Camada de dados — client-direct no Supabase (RLS protege os dados).
 import { supabase } from "./supabase";
 import type {
+  Aprovacao,
   ConfigVendas,
   Empreendimento,
   Proposta,
@@ -249,5 +250,37 @@ export const api = {
       .update({ status, atualizado_em: new Date().toISOString() })
       .eq("id", id);
     if (error) fail(error);
+  },
+
+  // ─── Aprovações (alçadas) ───────────────────────────────────────────────────
+  async listarAprovacoes(propostaId: string): Promise<Aprovacao[]> {
+    const { data, error } = await supabase
+      .from("aprovacoes")
+      .select("*")
+      .eq("proposta_id", propostaId)
+      .order("criado_em", { ascending: false });
+    if (error) fail(error);
+    return (data ?? []) as Aprovacao[];
+  },
+
+  /** Decide uma proposta: grava a trilha em `aprovacoes` e muda o status. */
+  async decidirProposta(args: {
+    propostaId: string;
+    aprovadorId: string;
+    decisao: "aprovada" | "rejeitada";
+    comentario: string;
+  }): Promise<void> {
+    const ins = await supabase.from("aprovacoes").insert({
+      proposta_id: args.propostaId,
+      aprovador_id: args.aprovadorId,
+      decisao: args.decisao,
+      comentario: args.comentario || null,
+    });
+    if (ins.error) fail(ins.error);
+    const upd = await supabase
+      .from("propostas")
+      .update({ status: args.decisao, atualizado_em: new Date().toISOString() })
+      .eq("id", args.propostaId);
+    if (upd.error) fail(upd.error);
   },
 };
