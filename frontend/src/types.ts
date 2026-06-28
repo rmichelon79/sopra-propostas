@@ -9,6 +9,12 @@ export interface Empreendimento {
 
 export type UnidadeStatus = "disponivel" | "reservada" | "vendida";
 
+/** Reforço da condição base, em % do valor da unidade. */
+export interface ReforcoBasePct {
+  data: string; // mês/ano (1º do mês)
+  pct: number;
+}
+
 export interface TabelaVenda {
   id: string;
   empreendimento_id: string;
@@ -16,6 +22,20 @@ export interface TabelaVenda {
   descricao: string | null;
   vigente: boolean;
   criada_em: string;
+  // Condição base (padrão), em % do valor da unidade.
+  cond_entrada_pct: number;
+  cond_saldo_pct: number;
+  cond_num_parcelas: number;
+  cond_reforcos: ReforcoBasePct[];
+}
+
+/** Condição de pagamento materializada em R$ (base ou proposta). */
+export interface CondicaoMaterializada {
+  entrada: number;
+  reforcos: { data: string; valor: number }[];
+  numParcelas: number;
+  valorParcela: number;
+  saldo: number;
 }
 
 export interface Unidade {

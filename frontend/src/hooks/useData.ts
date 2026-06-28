@@ -29,6 +29,23 @@ export const useTabelas = (empId: string | null) =>
     enabled: !!empId,
   });
 
+export function useSalvarCondicoesBase(empId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      tabelaId,
+      cond,
+    }: {
+      tabelaId: string;
+      cond: Parameters<typeof api.salvarCondicoesBase>[1];
+    }) => api.salvarCondicoesBase(tabelaId, cond),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tabela-vigente", empId] });
+      qc.invalidateQueries({ queryKey: ["tabelas", empId] });
+    },
+  });
+}
+
 export function useCriarNovaVersao() {
   const qc = useQueryClient();
   return useMutation({

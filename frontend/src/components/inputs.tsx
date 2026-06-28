@@ -1,4 +1,28 @@
+import type { ReactNode } from "react";
 import { isoMes, parseMes } from "../lib/datas";
+
+/** Linha de condição: descrição à esquerda, valor (R$) alinhado à direita.
+ *  Usada igual na tabela base (leitura) e na proposta (edição). */
+export function LinhaCond({
+  label,
+  children,
+  total,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+  total?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 ${
+        total ? "border-t border-slate-200 mt-1 pt-2 font-semibold" : "py-1"
+      }`}
+    >
+      <div className="flex min-w-0 items-center gap-2 text-sm text-slate-600">{label}</div>
+      <div className="w-44 shrink-0 text-right tabular-nums">{children}</div>
+    </div>
+  );
+}
 
 const MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",

@@ -9,6 +9,7 @@ import { api } from "../api/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Unidade, UnidadeStatus } from "../types";
 import { MoneyInput } from "./inputs";
+import { CondicoesBase } from "./CondicoesBase";
 
 interface Linha {
   key: string;
@@ -134,6 +135,8 @@ export function UnidadesCadastro({
           </button>
         )}
       </div>
+
+      <CondicoesBase tabela={tabela} empId={empId} podeEditar={podeEditar} />
 
       <div className="overflow-x-auto border border-slate-200 rounded-lg">
         <table className="w-full text-sm">

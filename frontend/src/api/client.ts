@@ -104,10 +104,19 @@ export const api = {
       .update({ vigente: false })
       .eq("id", atual.id);
     if (off.error) fail(off.error);
-    // cria a nova versão vigente
+    // cria a nova versão vigente (copia as condições base da anterior)
     const { data: nova, error } = await supabase
       .from("tabelas_venda")
-      .insert({ empreendimento_id: empId, versao: proxima, descricao, vigente: true })
+      .insert({
+        empreendimento_id: empId,
+        versao: proxima,
+        descricao,
+        vigente: true,
+        cond_entrada_pct: atual.cond_entrada_pct,
+        cond_saldo_pct: atual.cond_saldo_pct,
+        cond_num_parcelas: atual.cond_num_parcelas,
+        cond_reforcos: atual.cond_reforcos,
+      })
       .select()
       .single();
     if (error) fail(error);
@@ -129,6 +138,17 @@ export const api = {
       if (ins.error) fail(ins.error);
     }
     return novaTabela;
+  },
+
+  async salvarCondicoesBase(
+    tabelaId: string,
+    cond: Pick<
+      TabelaVenda,
+      "cond_entrada_pct" | "cond_saldo_pct" | "cond_num_parcelas" | "cond_reforcos"
+    >,
+  ): Promise<void> {
+    const { error } = await supabase.from("tabelas_venda").update(cond).eq("id", tabelaId);
+    if (error) fail(error);
   },
 
   // ─── Unidades (por tabela de venda) ─────────────────────────────────────────
