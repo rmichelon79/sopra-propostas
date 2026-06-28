@@ -27,3 +27,11 @@ export function hojeMes(): string {
   const d = new Date();
   return isoMes(d.getFullYear(), d.getMonth() + 1);
 }
+
+/** Soma n meses a uma data ISO (1º do mês). */
+export function addMeses(iso: string, n: number): string {
+  const p = parseMes(iso);
+  if (!p) return iso;
+  const total = p.ano * 12 + (p.mes - 1) + n;
+  return isoMes(Math.floor(total / 12), (total % 12) + 1);
+}

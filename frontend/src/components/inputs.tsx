@@ -12,17 +12,23 @@ export function MoneyInput({
   disabled,
   className = "",
   placeholder,
+  big,
 }: {
   value: number;
   onChange: (v: number) => void;
   disabled?: boolean;
   className?: string;
   placeholder?: string;
+  big?: boolean;
 }) {
   const display = value ? value.toLocaleString("pt-BR") : "";
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+      <span
+        className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-slate-400 ${
+          big ? "left-3 text-lg" : "left-2.5 text-xs"
+        }`}
+      >
         R$
       </span>
       <input
@@ -34,7 +40,7 @@ export function MoneyInput({
           const digits = e.target.value.replace(/\D/g, "");
           onChange(digits ? parseInt(digits, 10) : 0);
         }}
-        className={`inp pl-8 text-right ${className}`}
+        className={`inp ${big ? "pl-11 text-3xl font-bold py-1" : "pl-8 text-right"} ${className}`}
       />
     </div>
   );

@@ -40,8 +40,14 @@ export function PropostaConfigurador({
   const [dataBase, setDataBase] = useState(inicial?.config.data_base ?? `${hojeMes()}`);
   const [entradaValor, setEntradaValor] = useState(inicial?.config.entrada ?? 0);
   const [numParcelas, setNumParcelas] = useState(inicial?.config.num_parcelas ?? 36);
-  const [reforcos, setReforcos] = useState<{ mes: number; valor: number }[]>(
-    inicial?.config.reforcos ?? [],
+  const [reforcos, setReforcos] = useState<{ data: string | null; valor: number }[]>(
+    inicial?.config.reforcos?.length
+      ? inicial.config.reforcos.map((r) => ({ data: r.data ?? null, valor: r.valor }))
+      : [
+          { data: null, valor: 0 },
+          { data: null, valor: 0 },
+          { data: null, valor: 0 },
+        ],
   );
   const [saldoEntrega, setSaldoEntrega] = useState(inicial?.config.repasse?.valor ?? 0);
 
@@ -75,7 +81,8 @@ export function PropostaConfigurador({
 
   // Mês do saldo: automático pela data de entrega (relativo à data-base).
   const mesEntrega = cfg.entrega ? Math.max(1, mesesEntre(dataBase, cfg.entrega)) : numParcelas;
-  const somaReforcos = reforcos.reduce((s, r) => s + r.valor, 0);
+  const reforcosValidos = reforcos.filter((r) => r.data && r.valor > 0);
+  const somaReforcos = reforcosValidos.reduce((s, r) => s + r.valor, 0);
   const entradaPct = preco > 0 ? (entradaValor / preco) * 100 : 0;
 
   const valorParcela = useMemo(() => {
@@ -87,11 +94,14 @@ export function PropostaConfigurador({
 
   const av = useMemo(() => {
     if (!unidade) return null;
+    const reforcosCalc = reforcos
+      .filter((r) => r.data && r.valor > 0)
+      .map((r) => ({ mes: Math.max(0, mesesEntre(dataBase, r.data as string)), valor: r.valor }));
     return avaliarProposta({
       precoTabela: unidade.preco_tabela,
       precoNegociado: preco,
       vplPiso: unidade.vpl_piso,
-      config: { entrada: entradaValor, numParcelas, valorParcela, reforcos, repasse },
+      config: { entrada: entradaValor, numParcelas, valorParcela, reforcos: reforcosCalc, repasse },
       regras: {
         entradaMinimaPct: cfg.entrada_minima_pct,
         descontoMaximoPct: cfg.desconto_maximo_pct,
@@ -103,7 +113,7 @@ export function PropostaConfigurador({
       taxaDescontoAnual: cfg.taxa_desconto_anual,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unidade, preco, entradaValor, numParcelas, valorParcela, somaReforcos, saldoEntrega, mesEntrega, cfg]);
+  }, [unidade, preco, entradaValor, numParcelas, valorParcela, reforcos, dataBase, saldoEntrega, mesEntrega, cfg]);
 
   function montarConfig(): PropostaConfigJson {
     return {
@@ -111,7 +121,7 @@ export function PropostaConfigurador({
       entrada: entradaValor,
       num_parcelas: numParcelas,
       valor_parcela: valorParcela,
-      reforcos,
+      reforcos: reforcosValidos.map((r) => ({ data: r.data as string, valor: r.valor })),
       repasse,
     };
   }
@@ -171,17 +181,14 @@ export function PropostaConfigurador({
 
       {unidade && (
         <>
-          {/* Valor de tabela em destaque */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 flex items-end justify-between">
-            <div>
-              <div className="text-xs text-slate-500 uppercase tracking-wide">Valor de tabela</div>
-              <div className="text-3xl font-bold text-slate-800">{brl(unidade.preco_tabela)}</div>
+          {/* Valor de tabela + valor da proposta, mesmo destaque */}
+          <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <div className="text-xs text-slate-500 uppercase tracking-wide">Valor de tabela</div>
+            <div className="text-3xl font-bold text-slate-800">{brl(unidade.preco_tabela)}</div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide mt-4 mb-1">
+              Valor da proposta
             </div>
-            <div className="text-right">
-              <Campo label="Preço negociado">
-                <MoneyInput value={preco} onChange={setPreco} className="w-44" />
-              </Campo>
-            </div>
+            <MoneyInput value={preco} onChange={setPreco} big className="w-64" />
           </div>
 
           {/* Plano de pagamento */}
@@ -210,13 +217,13 @@ export function PropostaConfigurador({
               </div>
             </div>
 
-            {/* Reforços */}
+            {/* Reforços / balões — 3 linhas prontas, data mês/ano + valor */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-slate-500">Reforços / balões</span>
                 <button
                   type="button"
-                  onClick={() => setReforcos([...reforcos, { mes: 12, valor: 0 }])}
+                  onClick={() => setReforcos([...reforcos, { data: null, valor: 0 }])}
                   className="text-xs text-blue-600 hover:underline"
                 >
                   + adicionar
@@ -224,14 +231,11 @@ export function PropostaConfigurador({
               </div>
               {reforcos.map((r, i) => (
                 <div key={i} className="flex items-center gap-2 mb-1.5">
-                  <span className="text-xs text-slate-400 w-8">mês</span>
-                  <input
-                    type="number"
-                    value={r.mes}
-                    onChange={(e) =>
-                      setReforcos(reforcos.map((x, j) => (j === i ? { ...x, mes: Number(e.target.value) || 0 } : x)))
+                  <MesAnoInput
+                    value={r.data}
+                    onChange={(v) =>
+                      setReforcos(reforcos.map((x, j) => (j === i ? { ...x, data: v } : x)))
                     }
-                    className="inp w-20"
                   />
                   <div className="flex-1">
                     <MoneyInput
@@ -245,6 +249,7 @@ export function PropostaConfigurador({
                     type="button"
                     onClick={() => setReforcos(reforcos.filter((_, j) => j !== i))}
                     className="text-red-500 px-2"
+                    title="Remover"
                   >
                     ×
                   </button>

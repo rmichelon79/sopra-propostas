@@ -77,7 +77,7 @@ export interface PropostaConfigJson {
   entrada: number;
   num_parcelas: number;
   valor_parcela: number;
-  reforcos: { mes: number; valor: number }[];
+  reforcos: { data: string; valor: number }[]; // data mês/ano (1º do mês)
   repasse: { mes: number; valor: number } | null;
 }
 
