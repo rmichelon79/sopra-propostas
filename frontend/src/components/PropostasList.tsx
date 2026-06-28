@@ -32,7 +32,8 @@ export function PropostasList({ onEditar }: { onEditar: (p: Proposta) => void })
             <th className="px-3 py-2 font-medium">Unidade</th>
             <th className="px-3 py-2 font-medium">Cliente</th>
             <th className="px-3 py-2 font-medium text-right">Preço</th>
-            <th className="px-3 py-2 font-medium text-right">VPL</th>
+            <th className="px-3 py-2 font-medium text-right">VPL base</th>
+            <th className="px-3 py-2 font-medium text-right">VPL proposta</th>
             <th className="px-3 py-2 font-medium">Status</th>
             <th className="px-3 py-2"></th>
           </tr>
@@ -54,6 +55,9 @@ export function PropostasList({ onEditar }: { onEditar: (p: Proposta) => void })
                 </td>
                 <td className="px-3 py-2 text-slate-600">{p.cliente_nome || "—"}</td>
                 <td className="px-3 py-2 text-right">{brl(p.preco_negociado)}</td>
+                <td className="px-3 py-2 text-right text-slate-500">
+                  {p.vpl_piso_snapshot != null ? brl(p.vpl_piso_snapshot) : "—"}
+                </td>
                 <td className={`px-3 py-2 text-right ${abaixoPiso ? "text-amber-600" : ""}`}>
                   {p.vpl_calculado != null ? brl(p.vpl_calculado) : "—"}
                 </td>
