@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { ConfigVendas, UnidadeInput } from "../types";
+import type { ConfigVendas, PropostaInput, PropostaStatus, UnidadeInput } from "../types";
 
 export const useSessao = () =>
   useQuery({ queryKey: ["sessao"], queryFn: () => api.sessao() });
@@ -46,5 +46,26 @@ export function useSalvarConfig() {
     mutationFn: (cfg: ConfigVendas) => api.salvarConfigVendas(cfg),
     onSuccess: (_d, cfg) =>
       qc.invalidateQueries({ queryKey: ["config", cfg.empreendimento_id] }),
+  });
+}
+
+export const usePropostas = () =>
+  useQuery({ queryKey: ["propostas"], queryFn: () => api.listarPropostas() });
+
+export function useSalvarProposta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id?: string; input: PropostaInput }) =>
+      id ? api.atualizarProposta(id, input) : api.criarProposta(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["propostas"] }),
+  });
+}
+
+export function useMudarStatusProposta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: PropostaStatus }) =>
+      api.mudarStatusProposta(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["propostas"] }),
   });
 }

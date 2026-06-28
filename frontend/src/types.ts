@@ -50,3 +50,54 @@ export interface Sessao {
   role: string;
   aprovador: boolean; // admin | gestor → cadastra unidades/regras e aprova
 }
+
+export type PropostaStatus =
+  | "rascunho"
+  | "em_aprovacao"
+  | "aprovada"
+  | "rejeitada"
+  | "expirada";
+
+/** Plano de pagamento (gravado em propostas.config jsonb). */
+export interface PropostaConfigJson {
+  data_base: string; // ISO date — t0 do desconto
+  entrada: number;
+  num_parcelas: number;
+  valor_parcela: number;
+  reforcos: { mes: number; valor: number }[];
+  repasse: { mes: number; valor: number } | null;
+}
+
+export interface Proposta {
+  id: string;
+  unidade_id: string;
+  empreendimento_id: string;
+  vendedor_id: string;
+  cliente_nome: string | null;
+  cliente_contato: string | null;
+  preco_negociado: number;
+  config: PropostaConfigJson;
+  vpl_calculado: number | null;
+  vpl_piso_snapshot: number | null;
+  taxa_snapshot: number | null;
+  status: PropostaStatus;
+  criado_em: string;
+  atualizado_em: string;
+  // Campos embutidos (read-only) trazidos pela consulta da lista.
+  unidades?: { identificador: string } | null;
+  empreendimentos?: { codigo: string } | null;
+}
+
+export interface PropostaInput {
+  unidade_id: string;
+  empreendimento_id: string;
+  vendedor_id: string;
+  cliente_nome: string | null;
+  cliente_contato: string | null;
+  preco_negociado: number;
+  config: PropostaConfigJson;
+  vpl_calculado: number;
+  vpl_piso_snapshot: number;
+  taxa_snapshot: number;
+  status: PropostaStatus;
+}

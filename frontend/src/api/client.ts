@@ -3,6 +3,9 @@ import { supabase } from "./supabase";
 import type {
   ConfigVendas,
   Empreendimento,
+  Proposta,
+  PropostaInput,
+  PropostaStatus,
   Sessao,
   Unidade,
   UnidadeInput,
@@ -107,5 +110,45 @@ export const api = {
       .single();
     if (error) fail(error);
     return data as ConfigVendas;
+  },
+
+  // ─── Propostas ────────────────────────────────────────────────────────────
+  // A RLS já filtra: vendedor enxerga só as próprias; aprovador vê todas.
+  async listarPropostas(): Promise<Proposta[]> {
+    const { data, error } = await supabase
+      .from("propostas")
+      .select("*, unidades(identificador), empreendimentos(codigo)")
+      .order("atualizado_em", { ascending: false });
+    if (error) fail(error);
+    return (data ?? []) as Proposta[];
+  },
+
+  async criarProposta(input: PropostaInput): Promise<Proposta> {
+    const { data, error } = await supabase
+      .from("propostas")
+      .insert(input)
+      .select()
+      .single();
+    if (error) fail(error);
+    return data as Proposta;
+  },
+
+  async atualizarProposta(id: string, patch: Partial<PropostaInput>): Promise<Proposta> {
+    const { data, error } = await supabase
+      .from("propostas")
+      .update({ ...patch, atualizado_em: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) fail(error);
+    return data as Proposta;
+  },
+
+  async mudarStatusProposta(id: string, status: PropostaStatus): Promise<void> {
+    const { error } = await supabase
+      .from("propostas")
+      .update({ status, atualizado_em: new Date().toISOString() })
+      .eq("id", id);
+    if (error) fail(error);
   },
 };
