@@ -13,7 +13,7 @@ const LABEL: Record<Aba, string> = {
   nova: "Nova proposta",
   propostas: "Propostas",
   unidades: "Unidades",
-  regras: "Regras",
+  regras: "Empreendimento",
 };
 
 export default function App() {

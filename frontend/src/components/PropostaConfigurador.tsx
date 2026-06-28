@@ -1,16 +1,15 @@
 import { useMemo, useState } from "react";
-import { useSalvarProposta, useUnidades } from "../hooks/useData";
+import { useSalvarProposta, useTabelaVigente, useUnidades } from "../hooks/useData";
 import type { ConfigVendas, Proposta, PropostaConfigJson, Sessao, Unidade } from "../types";
 import { avaliarProposta } from "../lib/vpl";
 import { brl } from "../lib/format";
+import { fmtMesAno, hojeMes, mesesEntre } from "../lib/datas";
 
 const STATUS_UI = {
   aprovavel: { cor: "bg-green-100 text-green-800 border-green-300", txt: "Dentro das regras" },
   aprovacao: { cor: "bg-amber-100 text-amber-800 border-amber-300", txt: "Precisa de aprovação" },
   bloqueado: { cor: "bg-red-100 text-red-800 border-red-300", txt: "Bloqueada pelas regras" },
 } as const;
-
-const hoje = () => new Date().toISOString().slice(0, 10);
 
 export function PropostaConfigurador({
   empId,
@@ -25,7 +24,8 @@ export function PropostaConfigurador({
   inicial?: Proposta | null;
   onSalvou: () => void;
 }) {
-  const { data: unidades } = useUnidades(empId);
+  const { data: tabela } = useTabelaVigente(empId);
+  const { data: unidades } = useUnidades(tabela?.id ?? null);
   const salvar = useSalvarProposta();
 
   const disponiveis = (unidades ?? []).filter(
@@ -36,37 +36,53 @@ export function PropostaConfigurador({
   const [cliente, setCliente] = useState(inicial?.cliente_nome ?? "");
   const [contato, setContato] = useState(inicial?.cliente_contato ?? "");
   const [preco, setPreco] = useState(inicial?.preco_negociado ?? 0);
-  const [dataBase, setDataBase] = useState(inicial?.config.data_base ?? hoje());
-  const [entradaPct, setEntradaPct] = useState(
-    inicial && inicial.preco_negociado
-      ? (inicial.config.entrada / inicial.preco_negociado) * 100
-      : cfg.entrada_minima_pct,
-  );
+  const [dataBase, setDataBase] = useState(inicial?.config.data_base ?? `${hojeMes()}`);
+  const [entradaValor, setEntradaValor] = useState(inicial?.config.entrada ?? 0);
   const [numParcelas, setNumParcelas] = useState(inicial?.config.num_parcelas ?? 36);
   const [reforcos, setReforcos] = useState<{ mes: number; valor: number }[]>(
     inicial?.config.reforcos ?? [],
   );
-  const [repasse, setRepasse] = useState<{ mes: number; valor: number } | null>(
-    inicial?.config.repasse ?? null,
-  );
+  const [saldoEntrega, setSaldoEntrega] = useState(inicial?.config.repasse?.valor ?? 0);
 
-  const unidade: Unidade | undefined = disponiveis.find((u) => u.id === unidadeId);
+  // Resolve a unidade: da lista vigente, ou sintética (proposta antiga de outra versão).
+  const unidadeLista = disponiveis.find((u) => u.id === unidadeId);
+  const unidade: Unidade | undefined =
+    unidadeLista ??
+    (inicial && inicial.unidade_id === unidadeId
+      ? {
+          id: inicial.unidade_id,
+          empreendimento_id: empId,
+          tabela_id: null,
+          identificador: inicial.unidades?.identificador ?? "unidade",
+          tipo: null,
+          area: null,
+          preco_tabela: inicial.preco_negociado,
+          vpl_piso: inicial.vpl_piso_snapshot,
+          status: "disponivel",
+          ativo: true,
+        }
+      : undefined);
 
-  // Ao escolher a unidade, semeia o preço negociado com o de tabela.
   function escolherUnidade(id: string) {
     setUnidadeId(id);
     const u = (unidades ?? []).find((x) => x.id === id);
-    if (u && !preco) setPreco(u.preco_tabela);
+    if (u) {
+      if (!preco) setPreco(u.preco_tabela);
+      if (!entradaValor) setEntradaValor(Math.round((u.preco_tabela * cfg.entrada_minima_pct) / 100));
+    }
   }
 
-  const entrada = (preco * entradaPct) / 100;
+  // Mês do saldo: automático pela data de entrega (relativo à data-base).
+  const mesEntrega = cfg.entrega ? Math.max(1, mesesEntre(dataBase, cfg.entrega)) : numParcelas;
   const somaReforcos = reforcos.reduce((s, r) => s + r.valor, 0);
-  const repasseValor = repasse?.valor ?? 0;
-  // Parcelas cobrem o que sobra; total nominal = preço negociado por construção.
+  const entradaPct = preco > 0 ? (entradaValor / preco) * 100 : 0;
+
   const valorParcela = useMemo(() => {
-    const saldo = preco - entrada - somaReforcos - repasseValor;
+    const saldo = preco - entradaValor - somaReforcos - saldoEntrega;
     return numParcelas > 0 ? Math.max(0, saldo / numParcelas) : 0;
-  }, [preco, entrada, somaReforcos, repasseValor, numParcelas]);
+  }, [preco, entradaValor, somaReforcos, saldoEntrega, numParcelas]);
+
+  const repasse = saldoEntrega > 0 ? { mes: mesEntrega, valor: saldoEntrega } : null;
 
   const av = useMemo(() => {
     if (!unidade) return null;
@@ -74,13 +90,7 @@ export function PropostaConfigurador({
       precoTabela: unidade.preco_tabela,
       precoNegociado: preco,
       vplPiso: unidade.vpl_piso,
-      config: {
-        entrada,
-        numParcelas,
-        valorParcela,
-        reforcos,
-        repasse,
-      },
+      config: { entrada: entradaValor, numParcelas, valorParcela, reforcos, repasse },
       regras: {
         entradaMinimaPct: cfg.entrada_minima_pct,
         descontoMaximoPct: cfg.desconto_maximo_pct,
@@ -91,12 +101,13 @@ export function PropostaConfigurador({
       },
       taxaDescontoAnual: cfg.taxa_desconto_anual,
     });
-  }, [unidade, preco, entrada, numParcelas, valorParcela, reforcos, repasse, cfg]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unidade, preco, entradaValor, numParcelas, valorParcela, somaReforcos, saldoEntrega, mesEntrega, cfg]);
 
   function montarConfig(): PropostaConfigJson {
     return {
       data_base: dataBase,
-      entrada,
+      entrada: entradaValor,
       num_parcelas: numParcelas,
       valor_parcela: valorParcela,
       reforcos,
@@ -133,9 +144,7 @@ export function PropostaConfigurador({
 
   return (
     <div className="space-y-5">
-      <h2 className="text-base font-semibold">
-        {inicial ? "Editar proposta" : "Nova proposta"}
-      </h2>
+      <h2 className="text-base font-semibold">{inicial ? "Editar proposta" : "Nova proposta"}</h2>
 
       {/* Unidade + cliente */}
       <section className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
@@ -161,48 +170,59 @@ export function PropostaConfigurador({
 
       {unidade && (
         <>
-          {/* Plano de pagamento */}
-          <section className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Campo label={`Preço negociado (tabela ${brl(unidade.preco_tabela)})`}>
+          {/* Valor de tabela em destaque */}
+          <div className="rounded-xl border border-slate-200 bg-white p-5 flex items-end justify-between">
+            <div>
+              <div className="text-xs text-slate-500 uppercase tracking-wide">Valor de tabela</div>
+              <div className="text-3xl font-bold text-slate-800">{brl(unidade.preco_tabela)}</div>
+            </div>
+            <div className="text-right">
+              <Campo label="Preço negociado">
                 <input
                   type="number"
                   value={preco || ""}
                   onChange={(e) => setPreco(Number(e.target.value) || 0)}
+                  className="inp w-44 text-right"
+                />
+              </Campo>
+            </div>
+          </div>
+
+          {/* Plano de pagamento */}
+          <section className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Campo label={`Entrada (R$) — ${entradaPct.toFixed(1)}% do preço`}>
+                <input
+                  type="number"
+                  value={entradaValor || ""}
+                  onChange={(e) => setEntradaValor(Number(e.target.value) || 0)}
                   className="inp"
                 />
               </Campo>
               <Campo label="Data-base">
                 <input
-                  type="date"
-                  value={dataBase}
-                  onChange={(e) => setDataBase(e.target.value)}
+                  type="month"
+                  value={dataBase.slice(0, 7)}
+                  onChange={(e) => setDataBase(`${e.target.value}-01`)}
                   className="inp"
                 />
               </Campo>
             </div>
 
-            <Campo label={`Entrada: ${entradaPct.toFixed(0)}%  (${brl(entrada)})`}>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={entradaPct}
-                onChange={(e) => setEntradaPct(Number(e.target.value))}
-                className="w-full"
-              />
-            </Campo>
-
-            <Campo label={`Prazo: ${numParcelas}x de ${brl(valorParcela)}`}>
-              <input
-                type="range"
-                min={1}
-                max={120}
-                value={numParcelas}
-                onChange={(e) => setNumParcelas(Number(e.target.value))}
-                className="w-full"
-              />
-            </Campo>
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <Campo label="Nº de parcelas mensais">
+                <input
+                  type="number"
+                  value={numParcelas || ""}
+                  onChange={(e) => setNumParcelas(Number(e.target.value) || 0)}
+                  className="inp"
+                />
+              </Campo>
+              <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                <div className="text-xs text-slate-500">Parcela mensal (calculada)</div>
+                <div className="text-xl font-semibold">{brl(valorParcela)}</div>
+              </div>
+            </div>
 
             {/* Reforços */}
             <div>
@@ -247,35 +267,21 @@ export function PropostaConfigurador({
               ))}
             </div>
 
-            {/* Repasse / chaves */}
-            <div>
-              <label className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-                <input
-                  type="checkbox"
-                  checked={!!repasse}
-                  onChange={(e) => setRepasse(e.target.checked ? { mes: numParcelas, valor: 0 } : null)}
-                />
-                Repasse / financiamento bancário nas chaves
-              </label>
-              {repasse && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 w-8">mês</span>
-                  <input
-                    type="number"
-                    value={repasse.mes}
-                    onChange={(e) => setRepasse({ ...repasse, mes: Number(e.target.value) || 0 })}
-                    className="inp w-20"
-                  />
-                  <span className="text-xs text-slate-400">R$</span>
-                  <input
-                    type="number"
-                    value={repasse.valor || ""}
-                    onChange={(e) => setRepasse({ ...repasse, valor: Number(e.target.value) || 0 })}
-                    className="inp flex-1"
-                  />
-                </div>
-              )}
-            </div>
+            {/* Saldo na entrega (mês automático pela data de entrega) */}
+            <Campo
+              label={
+                cfg.entrega
+                  ? `Saldo na entrega (R$) — entrega ${fmtMesAno(cfg.entrega)}, mês ${mesEntrega}`
+                  : "Saldo na entrega (R$) — defina a data de entrega no empreendimento"
+              }
+            >
+              <input
+                type="number"
+                value={saldoEntrega || ""}
+                onChange={(e) => setSaldoEntrega(Number(e.target.value) || 0)}
+                className="inp"
+              />
+            </Campo>
           </section>
 
           {/* Avaliação ao vivo */}
@@ -315,7 +321,6 @@ export function PropostaConfigurador({
                   onClick={() => persistir(true)}
                   disabled={salvar.isPending || av.status === "bloqueado"}
                   className="px-4 py-2 text-sm rounded bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
-                  title={av.status === "bloqueado" ? "Proposta bloqueada pelas regras" : ""}
                 >
                   {av.status === "aprovavel" ? "Fechar proposta" : "Enviar para aprovação"}
                 </button>

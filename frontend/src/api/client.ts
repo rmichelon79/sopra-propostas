@@ -7,6 +7,7 @@ import type {
   PropostaInput,
   PropostaStatus,
   Sessao,
+  TabelaVenda,
   Unidade,
   UnidadeInput,
 } from "../types";
@@ -24,6 +25,8 @@ export const DEFAULT_CONFIG = (empId: string): ConfigVendas => ({
   parcela_minima_reais: 0,
   vpl_piso_fator: 1.0,
   acao_fora_regra: "aprovacao",
+  inicio_vendas: null,
+  entrega: null,
 });
 
 export const api = {
@@ -55,11 +58,85 @@ export const api = {
     return (data ?? []) as Empreendimento[];
   },
 
-  async listarUnidades(empId: string): Promise<Unidade[]> {
+  // ─── Tabelas de venda (versões) ─────────────────────────────────────────────
+  async tabelaVigente(empId: string): Promise<TabelaVenda | null> {
+    const { data, error } = await supabase
+      .from("tabelas_venda")
+      .select("*")
+      .eq("empreendimento_id", empId)
+      .eq("vigente", true)
+      .maybeSingle();
+    if (error) fail(error);
+    return data as TabelaVenda | null;
+  },
+
+  async listarTabelas(empId: string): Promise<TabelaVenda[]> {
+    const { data, error } = await supabase
+      .from("tabelas_venda")
+      .select("*")
+      .eq("empreendimento_id", empId)
+      .order("versao", { ascending: false });
+    if (error) fail(error);
+    return (data ?? []) as TabelaVenda[];
+  },
+
+  /** Garante que exista uma tabela vigente; cria a v1 se faltar. */
+  async garantirTabelaVigente(empId: string): Promise<TabelaVenda> {
+    const atual = await api.tabelaVigente(empId);
+    if (atual) return atual;
+    const { data, error } = await supabase
+      .from("tabelas_venda")
+      .insert({ empreendimento_id: empId, versao: 1, descricao: "Tabela inicial", vigente: true })
+      .select()
+      .single();
+    if (error) fail(error);
+    return data as TabelaVenda;
+  },
+
+  /** Clona a tabela vigente para uma nova versão (com suas unidades) e a torna vigente. */
+  async criarNovaVersao(empId: string, descricao: string): Promise<TabelaVenda> {
+    const atual = await api.garantirTabelaVigente(empId);
+    const tabelas = await api.listarTabelas(empId);
+    const proxima = Math.max(...tabelas.map((t) => t.versao)) + 1;
+    // desativa a vigente
+    const off = await supabase
+      .from("tabelas_venda")
+      .update({ vigente: false })
+      .eq("id", atual.id);
+    if (off.error) fail(off.error);
+    // cria a nova versão vigente
+    const { data: nova, error } = await supabase
+      .from("tabelas_venda")
+      .insert({ empreendimento_id: empId, versao: proxima, descricao, vigente: true })
+      .select()
+      .single();
+    if (error) fail(error);
+    const novaTabela = nova as TabelaVenda;
+    // clona as unidades da versão anterior
+    const antigas = await api.listarUnidades(atual.id);
+    if (antigas.length) {
+      const clones = antigas.map((u) => ({
+        empreendimento_id: empId,
+        tabela_id: novaTabela.id,
+        identificador: u.identificador,
+        tipo: u.tipo,
+        area: u.area,
+        preco_tabela: u.preco_tabela,
+        vpl_piso: u.vpl_piso,
+        status: u.status, // preserva vendida/reservada
+      }));
+      const ins = await supabase.from("unidades").insert(clones);
+      if (ins.error) fail(ins.error);
+    }
+    return novaTabela;
+  },
+
+  // ─── Unidades (por tabela de venda) ─────────────────────────────────────────
+  async listarUnidades(tabelaId: string): Promise<Unidade[]> {
     const { data, error } = await supabase
       .from("unidades")
       .select("*")
-      .eq("empreendimento_id", empId)
+      .eq("tabela_id", tabelaId)
       .eq("ativo", true)
       .order("identificador");
     if (error) fail(error);

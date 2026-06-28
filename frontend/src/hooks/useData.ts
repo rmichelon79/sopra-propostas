@@ -8,12 +8,39 @@ export const useSessao = () =>
 export const useEmpreendimentos = () =>
   useQuery({ queryKey: ["empreendimentos"], queryFn: () => api.listarEmpreendimentos() });
 
-export const useUnidades = (empId: string | null) =>
+export const useUnidades = (tabelaId: string | null) =>
   useQuery({
-    queryKey: ["unidades", empId],
-    queryFn: () => api.listarUnidades(empId as string),
+    queryKey: ["unidades", tabelaId],
+    queryFn: () => api.listarUnidades(tabelaId as string),
+    enabled: !!tabelaId,
+  });
+
+export const useTabelaVigente = (empId: string | null) =>
+  useQuery({
+    queryKey: ["tabela-vigente", empId],
+    queryFn: () => api.garantirTabelaVigente(empId as string),
     enabled: !!empId,
   });
+
+export const useTabelas = (empId: string | null) =>
+  useQuery({
+    queryKey: ["tabelas", empId],
+    queryFn: () => api.listarTabelas(empId as string),
+    enabled: !!empId,
+  });
+
+export function useCriarNovaVersao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ empId, descricao }: { empId: string; descricao: string }) =>
+      api.criarNovaVersao(empId, descricao),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["tabela-vigente", v.empId] });
+      qc.invalidateQueries({ queryKey: ["tabelas", v.empId] });
+      qc.invalidateQueries({ queryKey: ["unidades"] });
+    },
+  });
+}
 
 export const useConfigVendas = (empId: string | null) =>
   useQuery({
@@ -28,15 +55,15 @@ export function useSalvarUnidade() {
     mutationFn: ({ id, input }: { id?: string; input: UnidadeInput }) =>
       id ? api.atualizarUnidade(id, input) : api.criarUnidade(input),
     onSuccess: (_d, v) =>
-      qc.invalidateQueries({ queryKey: ["unidades", v.input.empreendimento_id] }),
+      qc.invalidateQueries({ queryKey: ["unidades", v.input.tabela_id] }),
   });
 }
 
-export function useExcluirUnidade(empId: string) {
+export function useExcluirUnidade(tabelaId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.excluirUnidade(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["unidades", empId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["unidades", tabelaId] }),
   });
 }
 

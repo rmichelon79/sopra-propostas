@@ -35,13 +35,39 @@ export function RegrasCadastro({
 
   const ro = !podeEditar;
 
+  const mesValue = (iso: string | null) => (iso ? iso.slice(0, 7) : "");
+  const mesToIso = (v: string): string | null => (v ? `${v}-01` : null);
+
   return (
     <form onSubmit={submeter} className="max-w-lg">
-      <h2 className="text-base font-semibold mb-1">Regras de venda</h2>
+      <h2 className="text-base font-semibold mb-1">Configuração do empreendimento</h2>
       <p className="text-sm text-slate-500 mb-5">
-        Limites aplicados a cada proposta deste empreendimento. Propostas fora da regra
-        seguem a ação escolhida abaixo.
+        Datas e limites aplicados a cada proposta. Propostas fora da regra seguem a ação
+        escolhida abaixo.
       </p>
+
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <label className="block">
+          <span className="block text-xs text-slate-500 mb-1">Início das vendas</span>
+          <input
+            type="month"
+            disabled={ro}
+            value={mesValue(cfg.inicio_vendas)}
+            onChange={(e) => set("inicio_vendas", mesToIso(e.target.value))}
+            className="inp"
+          />
+        </label>
+        <label className="block">
+          <span className="block text-xs text-slate-500 mb-1">Entrega</span>
+          <input
+            type="month"
+            disabled={ro}
+            value={mesValue(cfg.entrega)}
+            onChange={(e) => set("entrega", mesToIso(e.target.value))}
+            className="inp"
+          />
+        </label>
+      </div>
 
       <div className="space-y-4">
         <Linha label="Taxa de desconto (TMA)" sufixo="% a.a.">

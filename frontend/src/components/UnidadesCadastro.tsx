@@ -1,22 +1,42 @@
-import { useState } from "react";
-import { useExcluirUnidade, useSalvarUnidade, useUnidades } from "../hooks/useData";
-import type { Unidade, UnidadeInput, UnidadeStatus } from "../types";
-import { brl } from "../lib/format";
+import { useEffect, useState } from "react";
+import {
+  useCriarNovaVersao,
+  useTabelaVigente,
+  useTabelas,
+  useUnidades,
+} from "../hooks/useData";
+import { api } from "../api/client";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Unidade, UnidadeStatus } from "../types";
 
-const STATUS_LABEL: Record<UnidadeStatus, string> = {
-  disponivel: "Disponível",
-  reservada: "Reservada",
-  vendida: "Vendida",
-};
+interface Linha {
+  key: string;
+  id?: string;
+  identificador: string;
+  tipo: string;
+  area: string;
+  preco_tabela: string;
+  status: UnidadeStatus;
+}
 
-const vazia = (empId: string): UnidadeInput => ({
-  empreendimento_id: empId,
+let seq = 0;
+const novaLinha = (): Linha => ({
+  key: `nova-${seq++}`,
   identificador: "",
   tipo: "",
-  area: null,
-  preco_tabela: 0,
-  vpl_piso: null,
+  area: "",
+  preco_tabela: "",
   status: "disponivel",
+});
+
+const paraLinha = (u: Unidade): Linha => ({
+  key: u.id,
+  id: u.id,
+  identificador: u.identificador,
+  tipo: u.tipo ?? "",
+  area: u.area != null ? String(u.area) : "",
+  preco_tabela: String(u.preco_tabela),
+  status: u.status,
 });
 
 export function UnidadesCadastro({
@@ -28,206 +48,195 @@ export function UnidadesCadastro({
   pisoFator: number;
   podeEditar: boolean;
 }) {
-  const { data: unidades, isLoading } = useUnidades(empId);
-  const salvar = useSalvarUnidade();
-  const excluir = useExcluirUnidade(empId);
+  const qc = useQueryClient();
+  const { data: tabela } = useTabelaVigente(empId);
+  const { data: tabelas } = useTabelas(empId);
+  const { data: unidades, isLoading } = useUnidades(tabela?.id ?? null);
+  const novaVersao = useCriarNovaVersao();
 
-  const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<UnidadeInput | null>(null);
+  const [linhas, setLinhas] = useState<Linha[]>([]);
+  const [removidos, setRemovidos] = useState<string[]>([]);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  function abrirNova() {
-    setEditId(null);
-    setForm(vazia(empId));
+  // Semeia a grade quando as unidades da tabela carregam (ou troca de tabela).
+  useEffect(() => {
+    if (unidades) {
+      setLinhas(unidades.map(paraLinha));
+      setRemovidos([]);
+    }
+  }, [unidades, tabela?.id]);
+
+  function set(key: string, campo: keyof Linha, valor: string) {
+    setLinhas((ls) => ls.map((l) => (l.key === key ? { ...l, [campo]: valor } : l)));
   }
-  function abrirEdicao(u: Unidade) {
-    setEditId(u.id);
-    setForm({
-      empreendimento_id: u.empreendimento_id,
-      identificador: u.identificador,
-      tipo: u.tipo ?? "",
-      area: u.area,
-      preco_tabela: u.preco_tabela,
-      vpl_piso: u.vpl_piso,
-      status: u.status,
-    });
-  }
-  function fechar() {
-    setForm(null);
-    setEditId(null);
+  function remover(l: Linha) {
+    if (l.id) setRemovidos((r) => [...r, l.id as string]);
+    setLinhas((ls) => ls.filter((x) => x.key !== l.key));
   }
 
-  async function submeter(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form || !form.identificador.trim() || form.preco_tabela <= 0) return;
-    await salvar.mutateAsync({ id: editId ?? undefined, input: form });
-    fechar();
+  async function salvar() {
+    if (!tabela) return;
+    setErro(null);
+    setSalvando(true);
+    try {
+      for (const id of removidos) await api.excluirUnidade(id);
+      for (const l of linhas) {
+        if (!l.identificador.trim() || !l.preco_tabela) continue;
+        const input = {
+          empreendimento_id: empId,
+          tabela_id: tabela.id,
+          identificador: l.identificador.trim(),
+          tipo: l.tipo.trim() || null,
+          area: l.area ? Number(l.area) : null,
+          preco_tabela: Number(l.preco_tabela) || 0,
+          vpl_piso: null,
+          status: l.status,
+        };
+        if (l.id) await api.atualizarUnidade(l.id, input);
+        else await api.criarUnidade(input);
+      }
+      await qc.invalidateQueries({ queryKey: ["unidades", tabela.id] });
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSalvando(false);
+    }
   }
+
+  async function criarVersao() {
+    const desc = prompt("Descrição da nova versão da tabela (ex.: reajuste jun/2026):", "");
+    if (desc === null) return;
+    await novaVersao.mutateAsync({ empId, descricao: desc });
+  }
+
+  if (isLoading || !tabela)
+    return <div className="text-sm text-slate-400 py-8 text-center">Carregando…</div>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold">Unidades</h2>
+        <div>
+          <h2 className="text-base font-semibold">Tabela de unidades</h2>
+          <div className="text-xs text-slate-500">
+            Versão {tabela.versao} (vigente){tabela.descricao ? ` — ${tabela.descricao}` : ""}
+            {tabelas && tabelas.length > 1 && ` · ${tabelas.length} versões`}
+          </div>
+        </div>
         {podeEditar && (
           <button
-            onClick={abrirNova}
-            className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white font-medium hover:bg-blue-700"
+            onClick={criarVersao}
+            disabled={novaVersao.isPending}
+            className="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50 disabled:opacity-50"
           >
-            + Nova unidade
+            {novaVersao.isPending ? "Criando…" : "Nova versão"}
           </button>
         )}
       </div>
 
-      {isLoading ? (
-        <div className="text-sm text-slate-400 py-8 text-center">Carregando…</div>
-      ) : !unidades?.length ? (
-        <div className="text-sm text-slate-400 py-8 text-center border border-dashed rounded">
-          Nenhuma unidade cadastrada para este empreendimento.
-        </div>
-      ) : (
-        <div className="overflow-x-auto border border-slate-200 rounded-lg">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
-              <tr>
-                <th className="px-3 py-2 font-medium">Identificador</th>
-                <th className="px-3 py-2 font-medium">Tipo</th>
-                <th className="px-3 py-2 font-medium text-right">Área</th>
-                <th className="px-3 py-2 font-medium text-right">Preço de tabela</th>
-                <th className="px-3 py-2 font-medium text-right">VPL piso</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                {podeEditar && <th className="px-3 py-2"></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {unidades.map((u) => (
-                <tr key={u.id} className="border-t border-slate-100">
-                  <td className="px-3 py-2 font-medium">{u.identificador}</td>
-                  <td className="px-3 py-2 text-slate-500">{u.tipo || "—"}</td>
-                  <td className="px-3 py-2 text-right">{u.area ? `${u.area} m²` : "—"}</td>
-                  <td className="px-3 py-2 text-right">{brl(u.preco_tabela)}</td>
-                  <td className="px-3 py-2 text-right text-slate-500">
-                    {brl(u.vpl_piso ?? u.preco_tabela * pisoFator)}
-                  </td>
-                  <td className="px-3 py-2">{STATUS_LABEL[u.status]}</td>
-                  {podeEditar && (
-                    <td className="px-3 py-2 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => abrirEdicao(u)}
-                        className="text-blue-600 hover:underline mr-3"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Excluir a unidade "${u.identificador}"?`))
-                            excluir.mutate(u.id);
-                        }}
-                        className="text-red-600 hover:underline"
-                      >
-                        Excluir
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {form && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <form
-            onSubmit={submeter}
-            className="bg-white rounded-xl p-6 w-[440px] max-w-full shadow-2xl"
-          >
-            <h3 className="text-base font-semibold mb-4">
-              {editId ? "Editar unidade" : "Nova unidade"}
-            </h3>
-            <div className="space-y-3">
-              <Campo label="Identificador *">
-                <input
-                  value={form.identificador}
-                  onChange={(e) => setForm({ ...form, identificador: e.target.value })}
-                  placeholder="Quadra 3 Lote 12 / Torre A apto 504"
-                  className="inp"
-                  autoFocus
-                />
-              </Campo>
-              <div className="grid grid-cols-2 gap-3">
-                <Campo label="Tipo">
+      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-slate-500 text-left">
+            <tr>
+              <th className="px-3 py-2 font-medium">Identificador</th>
+              <th className="px-3 py-2 font-medium">Tipo</th>
+              <th className="px-3 py-2 font-medium text-right">Área (m²)</th>
+              <th className="px-3 py-2 font-medium text-right">Valor (R$)</th>
+              <th className="px-3 py-2 font-medium">Status</th>
+              {podeEditar && <th className="px-3 py-2"></th>}
+            </tr>
+          </thead>
+          <tbody>
+            {linhas.map((l) => (
+              <tr key={l.key} className="border-t border-slate-100">
+                <td className="px-2 py-1">
                   <input
-                    value={form.tipo ?? ""}
-                    onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-                    placeholder="lote / apartamento"
+                    disabled={!podeEditar}
+                    value={l.identificador}
+                    onChange={(e) => set(l.key, "identificador", e.target.value)}
+                    placeholder="Lote 12"
                     className="inp"
                   />
-                </Campo>
-                <Campo label="Área (m²)">
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    disabled={!podeEditar}
+                    value={l.tipo}
+                    onChange={(e) => set(l.key, "tipo", e.target.value)}
+                    className="inp"
+                  />
+                </td>
+                <td className="px-2 py-1">
                   <input
                     type="number"
-                    value={form.area ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, area: e.target.value ? Number(e.target.value) : null })
-                    }
-                    className="inp"
+                    disabled={!podeEditar}
+                    value={l.area}
+                    onChange={(e) => set(l.key, "area", e.target.value)}
+                    className="inp text-right"
                   />
-                </Campo>
-              </div>
-              <Campo label="Preço de tabela (R$) *">
-                <input
-                  type="number"
-                  value={form.preco_tabela || ""}
-                  onChange={(e) => setForm({ ...form, preco_tabela: Number(e.target.value) || 0 })}
-                  className="inp"
-                />
-              </Campo>
-              <Campo label={`VPL piso (R$) — vazio = preço × ${(pisoFator * 100).toFixed(0)}%`}>
-                <input
-                  type="number"
-                  value={form.vpl_piso ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, vpl_piso: e.target.value ? Number(e.target.value) : null })
-                  }
-                  placeholder={brl(form.preco_tabela * pisoFator)}
-                  className="inp"
-                />
-              </Campo>
-              <Campo label="Status">
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as UnidadeStatus })}
-                  className="inp"
-                >
-                  <option value="disponivel">Disponível</option>
-                  <option value="reservada">Reservada</option>
-                  <option value="vendida">Vendida</option>
-                </select>
-              </Campo>
-            </div>
-            <div className="flex justify-end gap-2 mt-5">
-              <button type="button" onClick={fechar} className="px-3 py-1.5 text-sm rounded border">
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={salvar.isPending}
-                className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
-              >
-                {salvar.isPending ? "Salvando…" : "Salvar"}
-              </button>
-            </div>
-          </form>
+                </td>
+                <td className="px-2 py-1">
+                  <input
+                    type="number"
+                    disabled={!podeEditar}
+                    value={l.preco_tabela}
+                    onChange={(e) => set(l.key, "preco_tabela", e.target.value)}
+                    className="inp text-right"
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <select
+                    disabled={!podeEditar}
+                    value={l.status}
+                    onChange={(e) => set(l.key, "status", e.target.value)}
+                    className="inp"
+                  >
+                    <option value="disponivel">Disponível</option>
+                    <option value="reservada">Reservada</option>
+                    <option value="vendida">Vendida</option>
+                  </select>
+                </td>
+                {podeEditar && (
+                  <td className="px-2 py-1 text-right">
+                    <button onClick={() => remover(l)} className="text-red-500 px-2" title="Remover">
+                      ×
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {!linhas.length && (
+              <tr>
+                <td colSpan={podeEditar ? 6 : 5} className="px-3 py-6 text-center text-slate-400">
+                  Nenhuma unidade nesta tabela.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {podeEditar && (
+        <div className="flex items-center gap-3 mt-3">
+          <button
+            onClick={() => setLinhas((ls) => [...ls, novaLinha()])}
+            className="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50"
+          >
+            + Linha
+          </button>
+          <button
+            onClick={salvar}
+            disabled={salvando}
+            className="px-4 py-1.5 text-sm rounded bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
+          >
+            {salvando ? "Salvando…" : "Salvar tabela"}
+          </button>
+          {erro && <span className="text-sm text-red-600">{erro}</span>}
+          <span className="ml-auto text-xs text-slate-400">
+            VPL piso = valor × {(pisoFator * 100).toFixed(0)}%
+          </span>
         </div>
       )}
     </div>
-  );
-}
-
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="block text-xs text-slate-500 mb-1">{label}</span>
-      {children}
-    </label>
   );
 }

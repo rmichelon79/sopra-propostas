@@ -9,13 +9,23 @@ export interface Empreendimento {
 
 export type UnidadeStatus = "disponivel" | "reservada" | "vendida";
 
+export interface TabelaVenda {
+  id: string;
+  empreendimento_id: string;
+  versao: number;
+  descricao: string | null;
+  vigente: boolean;
+  criada_em: string;
+}
+
 export interface Unidade {
   id: string;
   empreendimento_id: string;
+  tabela_id: string | null;
   identificador: string;
   tipo: string | null;
   area: number | null;
-  preco_tabela: number;
+  preco_tabela: number; // valor nominal de tabela
   vpl_piso: number | null; // null = usa preco_tabela * config.vpl_piso_fator
   status: UnidadeStatus;
   ativo: boolean;
@@ -23,6 +33,7 @@ export interface Unidade {
 
 export interface UnidadeInput {
   empreendimento_id: string;
+  tabela_id: string;
   identificador: string;
   tipo: string | null;
   area: number | null;
@@ -42,6 +53,8 @@ export interface ConfigVendas {
   parcela_minima_reais: number;
   vpl_piso_fator: number; // 1.0 = piso é o preço à vista
   acao_fora_regra: AcaoForaRegra;
+  inicio_vendas: string | null; // ISO date (1º do mês)
+  entrega: string | null; // ISO date (1º do mês) — define o mês do saldo
 }
 
 export interface Sessao {
