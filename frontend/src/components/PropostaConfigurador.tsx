@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { useSalvarProposta, useTabelaVigente, useUnidades } from "../hooks/useData";
 import type { ConfigVendas, Proposta, PropostaConfigJson, Sessao, Unidade } from "../types";
 import { avaliarProposta, calcularVpl, type PropostaConfig } from "../lib/vpl";
-import { materializarBase } from "../lib/condicao";
+import { materializarBase, totalCondicao } from "../lib/condicao";
 import { brl } from "../lib/format";
 import { fmtMesAno, hojeMes, mesesEntre } from "../lib/datas";
-import { LinhaCond, MesAnoInput, MoneyInput } from "./inputs";
+import { LinhaCond, MoneyInput } from "./inputs";
 
 const STATUS_UI = {
   aprovavel: { cor: "bg-green-100 text-green-800 border-green-300", txt: "Dentro das regras" },
@@ -42,7 +42,7 @@ export function PropostaConfigurador({
   const [unidadeId, setUnidadeId] = useState(inicial?.unidade_id ?? "");
   const [cliente, setCliente] = useState(inicial?.cliente_nome ?? "");
   const [contato, setContato] = useState(inicial?.cliente_contato ?? "");
-  const [dataBase, setDataBase] = useState(inicial?.config.data_base ?? hojeMes());
+  const [dataBase] = useState(inicial?.config.data_base ?? cfg.inicio_vendas ?? hojeMes());
   const [entrada, setEntrada] = useState(inicial?.config.entrada ?? 0);
   const [numParcelas, setNumParcelas] = useState(inicial?.config.num_parcelas ?? 0);
   const [valorParcela, setValorParcela] = useState(inicial?.config.valor_parcela ?? 0);
@@ -227,10 +227,13 @@ export function PropostaConfigurador({
             <LinhaCond label={`Saldo na entrega ${cfg.entrega ? fmtMesAno(cfg.entrega) : ""}`}>
               {brl(base.saldo)}
             </LinhaCond>
+            <LinhaCond label="Total (a prazo)" total>
+              {brl(totalCondicao(base))}
+            </LinhaCond>
           </section>
 
-          {/* Proposta (editável) — mesmo layout */}
-          <section className="rounded-xl border border-slate-200 bg-white p-5">
+          {/* Proposta (editável) — layout IDÊNTICO à base; só o valor em R$ muda */}
+          <section className="rounded-xl border border-blue-200 bg-white p-5">
             <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">
               Proposta
             </div>
@@ -240,27 +243,7 @@ export function PropostaConfigurador({
             </LinhaCond>
 
             {reforcos.map((r, i) => (
-              <LinhaCond
-                key={i}
-                label={
-                  <>
-                    <MesAnoInput
-                      value={r.data}
-                      onChange={(v) =>
-                        setReforcos(reforcos.map((x, j) => (j === i ? { ...x, data: v } : x)))
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setReforcos(reforcos.filter((_, j) => j !== i))}
-                      className="text-red-500 px-1"
-                      title="Remover reforço"
-                    >
-                      ×
-                    </button>
-                  </>
-                }
-              >
+              <LinhaCond key={i} label={`Reforço ${fmtMesAno(r.data)}`}>
                 <MoneyInput
                   value={r.valor}
                   onChange={(v) =>
@@ -270,49 +253,18 @@ export function PropostaConfigurador({
                 />
               </LinhaCond>
             ))}
-            <div className="py-1">
-              <button
-                type="button"
-                onClick={() => setReforcos([...reforcos, { data: null, valor: 0 }])}
-                className="text-xs text-blue-600 hover:underline"
-              >
-                + reforço
-              </button>
-            </div>
 
-            <LinhaCond
-              label={
-                <>
-                  <input
-                    type="number"
-                    value={numParcelas || ""}
-                    onChange={(e) => setNumParcelas(Number(e.target.value) || 0)}
-                    className="inp w-16"
-                  />
-                  <span>× mensais</span>
-                </>
-              }
-            >
+            <LinhaCond label={`${numParcelas}× mensais`}>
               <MoneyInput value={valorParcela} onChange={setValorParcela} className="w-full" />
             </LinhaCond>
 
-            <LinhaCond
-              label={`Saldo na entrega ${cfg.entrega ? `(${fmtMesAno(cfg.entrega)})` : "— defina a entrega"}`}
-            >
+            <LinhaCond label={`Saldo na entrega ${cfg.entrega ? fmtMesAno(cfg.entrega) : ""}`}>
               <MoneyInput value={saldo} onChange={setSaldo} className="w-full" />
             </LinhaCond>
 
             <LinhaCond label="Preço negociável (a prazo)" total>
               {brl(precoNegociavel)}
             </LinhaCond>
-
-            <div className="mt-3">
-              <Campo label="Data-base">
-                <div className="w-56">
-                  <MesAnoInput value={dataBase} onChange={(v) => setDataBase(v ?? hojeMes())} />
-                </div>
-              </Campo>
-            </div>
           </section>
 
           {/* Avaliação ao vivo */}
