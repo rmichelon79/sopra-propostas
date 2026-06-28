@@ -209,16 +209,16 @@ export function PropostaConfigurador({
 
       {unidade && base && (
         <>
-          {/* Valor de tabela em destaque */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <div className="text-xs text-slate-500 uppercase tracking-wide">Valor de tabela</div>
-            <div className="text-3xl font-bold text-slate-800">{brl(unidade.preco_tabela)}</div>
-          </div>
-
           {/* Tabela base (referência) — layout idêntico ao da proposta */}
           <section className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-              Tabela base (referência)
+            <div className="flex items-baseline justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Tabela base (referência)
+              </span>
+              <span className="text-sm text-slate-500">
+                Valor de tabela{" "}
+                <b className="text-slate-800">{brl(unidade.preco_tabela)}</b>
+              </span>
             </div>
             <LinhaCond label="Entrada">{brl(base.entrada)}</LinhaCond>
             {base.reforcos.map((r, i) => (
