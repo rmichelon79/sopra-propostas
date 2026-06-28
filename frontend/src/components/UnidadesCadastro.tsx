@@ -43,11 +43,9 @@ const paraLinha = (u: Unidade): Linha => ({
 
 export function UnidadesCadastro({
   empId,
-  pisoFator,
   podeEditar,
 }: {
   empId: string;
-  pisoFator: number;
   podeEditar: boolean;
 }) {
   const qc = useQueryClient();
@@ -235,7 +233,7 @@ export function UnidadesCadastro({
           </button>
           {erro && <span className="text-sm text-red-600">{erro}</span>}
           <span className="ml-auto text-xs text-slate-400">
-            VPL piso = valor × {(pisoFator * 100).toFixed(0)}%
+            VPL piso = VPL da condição da tabela base
           </span>
         </div>
       )}

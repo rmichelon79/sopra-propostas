@@ -31,7 +31,6 @@ export interface RegrasConfig {
   descontoMaximoPct: number; // % sobre o preço de tabela
   prazoMaximoMeses: number;
   parcelaMinimaReais: number;
-  vplPisoFator: number; // 1.0 = piso é o preço à vista
   acaoForaRegra: "aprovacao" | "bloqueio";
 }
 
@@ -58,7 +57,7 @@ export interface Avaliacao {
 export interface AvaliacaoInput {
   precoTabela: number;
   precoNegociado: number;
-  vplPiso?: number | null; // se null: precoTabela * regras.vplPisoFator
+  vplPiso: number; // piso = VPL da condição da tabela base
   config: PropostaConfig;
   regras: RegrasConfig;
   taxaDescontoAnual: number; // TMA, ex. 0.12 = 12% a.a.
@@ -105,7 +104,7 @@ export function calcularVpl(config: PropostaConfig, taxaDescontoAnual: number): 
 /** Avalia a proposta contra o piso e as regras; classifica em verde/amarelo/vermelho. */
 export function avaliarProposta(inp: AvaliacaoInput): Avaliacao {
   const vpl = calcularVpl(inp.config, inp.taxaDescontoAnual);
-  const vplPiso = inp.vplPiso ?? inp.precoTabela * inp.regras.vplPisoFator;
+  const vplPiso = inp.vplPiso;
   const entradaPct =
     inp.precoNegociado > 0 ? (inp.config.entrada / inp.precoNegociado) * 100 : 0;
   const descontoPct =

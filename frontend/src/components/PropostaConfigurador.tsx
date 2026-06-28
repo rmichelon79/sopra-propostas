@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSalvarProposta, useTabelaVigente, useUnidades } from "../hooks/useData";
 import type { ConfigVendas, Proposta, PropostaConfigJson, Sessao, Unidade } from "../types";
-import { avaliarProposta } from "../lib/vpl";
+import { avaliarProposta, calcularVpl, type PropostaConfig } from "../lib/vpl";
 import { materializarBase } from "../lib/condicao";
 import { brl } from "../lib/format";
 import { fmtMesAno, hojeMes, mesesEntre } from "../lib/datas";
@@ -107,27 +107,36 @@ export function PropostaConfigurador({
   const repasse = saldo > 0 ? { mes: mesEntrega, valor: saldo } : null;
 
   const av = useMemo(() => {
-    if (!unidade) return null;
-    const reforcosCalc = reforcos
-      .filter((r) => r.data && r.valor > 0)
-      .map((r) => ({ mes: Math.max(0, mesesEntre(dataBase, r.data as string)), valor: r.valor }));
+    if (!unidade || !base) return null;
+    const flowReforcos = (refs: { data: string | null; valor: number }[]) =>
+      refs
+        .filter((r) => r.data && r.valor > 0)
+        .map((r) => ({ mes: Math.max(0, mesesEntre(dataBase, r.data as string)), valor: r.valor }));
+    // Piso = VPL da condição da tabela base materializada para esta unidade.
+    const baseFlow: PropostaConfig = {
+      entrada: base.entrada,
+      numParcelas: base.numParcelas,
+      valorParcela: base.valorParcela,
+      reforcos: flowReforcos(base.reforcos),
+      repasse: base.saldo > 0 ? { mes: mesEntrega, valor: base.saldo } : null,
+    };
+    const pisoVPL = calcularVpl(baseFlow, cfg.taxa_desconto_anual);
     return avaliarProposta({
       precoTabela: unidade.preco_tabela,
       precoNegociado: unidade.preco_tabela, // entrada % é sobre o valor da unidade
-      vplPiso: unidade.vpl_piso,
-      config: { entrada, numParcelas, valorParcela, reforcos: reforcosCalc, repasse },
+      vplPiso: pisoVPL,
+      config: { entrada, numParcelas, valorParcela, reforcos: flowReforcos(reforcos), repasse },
       regras: {
         entradaMinimaPct: cfg.entrada_minima_pct,
         descontoMaximoPct: cfg.desconto_maximo_pct,
         prazoMaximoMeses: cfg.prazo_maximo_meses,
         parcelaMinimaReais: cfg.parcela_minima_reais,
-        vplPisoFator: cfg.vpl_piso_fator,
         acaoForaRegra: cfg.acao_fora_regra,
       },
       taxaDescontoAnual: cfg.taxa_desconto_anual,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unidade, entrada, numParcelas, valorParcela, reforcos, dataBase, saldo, mesEntrega, cfg]);
+  }, [unidade, base, entrada, numParcelas, valorParcela, reforcos, dataBase, saldo, mesEntrega, cfg]);
 
   const precoNegociavel = av?.totalNominal ?? 0;
 

@@ -71,7 +71,6 @@ export interface ConfigVendas {
   desconto_maximo_pct: number;
   prazo_maximo_meses: number;
   parcela_minima_reais: number;
-  vpl_piso_fator: number; // 1.0 = piso é o preço à vista
   acao_fora_regra: AcaoForaRegra;
   inicio_vendas: string | null; // ISO date (1º do mês)
   entrega: string | null; // ISO date (1º do mês) — define o mês do saldo

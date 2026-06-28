@@ -116,7 +116,7 @@ export default function App() {
         ) : aba === "propostas" ? (
           <PropostasList onEditar={abrirParaEditar} />
         ) : aba === "unidades" ? (
-          <UnidadesCadastro empId={empId} pisoFator={cfg.vpl_piso_fator} podeEditar={podeEditar} />
+          <UnidadesCadastro empId={empId} podeEditar={podeEditar} />
         ) : (
           <RegrasCadastro empId={empId} podeEditar={podeEditar} />
         )}

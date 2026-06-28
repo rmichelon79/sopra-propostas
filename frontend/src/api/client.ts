@@ -23,7 +23,6 @@ export const DEFAULT_CONFIG = (empId: string): ConfigVendas => ({
   desconto_maximo_pct: 0,
   prazo_maximo_meses: 60,
   parcela_minima_reais: 0,
-  vpl_piso_fator: 1.0,
   acao_fora_regra: "aprovacao",
   inicio_vendas: null,
   entrega: null,

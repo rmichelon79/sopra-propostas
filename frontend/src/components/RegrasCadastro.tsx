@@ -104,15 +104,6 @@ export function RegrasCadastro({
             onChange={(v) => set("parcela_minima_reais", v)}
           />
         </Linha>
-        <Linha label="VPL piso" sufixo="% do preço à vista">
-          <input
-            type="number"
-            disabled={ro}
-            value={(cfg.vpl_piso_fator * 100).toFixed(0)}
-            onChange={(e) => set("vpl_piso_fator", (Number(e.target.value) || 0) / 100)}
-            className="inp"
-          />
-        </Linha>
         <Linha label="Fora da regra" sufixo="">
           <select
             disabled={ro}
