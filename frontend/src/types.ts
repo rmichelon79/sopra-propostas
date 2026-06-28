@@ -70,6 +70,7 @@ export interface ConfigVendas {
   entrada_minima_pct: number;
   desconto_maximo_pct: number;
   prazo_maximo_meses: number;
+  prazo_ate_entrega: boolean; // true: prazo máx = meses até a entrega
   parcela_minima_reais: number;
   acao_fora_regra: AcaoForaRegra;
   inicio_vendas: string | null; // ISO date (1º do mês)

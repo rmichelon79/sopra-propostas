@@ -40,7 +40,7 @@ export function CondicoesBase({
 
   // VPL da condição base como % do valor de tabela (= piso em %). Independe do valor.
   const vplPct = useMemo(() => {
-    const t0 = cfg.inicio_vendas ?? hojeMes();
+    const t0 = hojeMes(); // VPL da tabela de vendas calculado na data atual
     const b = materializarBase(VREF, {
       ...tabela,
       cond_entrada_pct: entrada,

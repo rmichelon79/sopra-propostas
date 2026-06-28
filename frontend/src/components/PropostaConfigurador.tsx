@@ -5,7 +5,7 @@ import { avaliarProposta, calcularVpl, type PropostaConfig } from "../lib/vpl";
 import { materializarBase, totalCondicao } from "../lib/condicao";
 import { brl } from "../lib/format";
 import { fmtMesAno, hojeMes, mesesEntre } from "../lib/datas";
-import { LinhaCond, MoneyInput } from "./inputs";
+import { LinhaCond, MesAnoInput, MoneyInput } from "./inputs";
 
 const STATUS_UI = {
   aprovavel: { cor: "bg-green-100 text-green-800 border-green-300", txt: "Dentro das regras" },
@@ -42,7 +42,7 @@ export function PropostaConfigurador({
   const [unidadeId, setUnidadeId] = useState(inicial?.unidade_id ?? "");
   const [cliente, setCliente] = useState(inicial?.cliente_nome ?? "");
   const [contato, setContato] = useState(inicial?.cliente_contato ?? "");
-  const [dataBase] = useState(inicial?.config.data_base ?? cfg.inicio_vendas ?? hojeMes());
+  const dataBase = hojeMes(); // VPL calculado na data atual
   const [entrada, setEntrada] = useState(inicial?.config.entrada ?? 0);
   const [numParcelas, setNumParcelas] = useState(inicial?.config.num_parcelas ?? 0);
   const [valorParcela, setValorParcela] = useState(inicial?.config.valor_parcela ?? 0);
@@ -129,7 +129,10 @@ export function PropostaConfigurador({
       regras: {
         entradaMinimaPct: cfg.entrada_minima_pct,
         descontoMaximoPct: cfg.desconto_maximo_pct,
-        prazoMaximoMeses: cfg.prazo_maximo_meses,
+        prazoMaximoMeses:
+          cfg.prazo_ate_entrega && cfg.entrega
+            ? Math.max(1, mesesEntre(dataBase, cfg.entrega))
+            : cfg.prazo_maximo_meses,
         parcelaMinimaReais: cfg.parcela_minima_reais,
         acaoForaRegra: cfg.acao_fora_regra,
       },
@@ -243,7 +246,28 @@ export function PropostaConfigurador({
             </LinhaCond>
 
             {reforcos.map((r, i) => (
-              <LinhaCond key={i} label={`Reforço ${fmtMesAno(r.data)}`}>
+              <LinhaCond
+                key={i}
+                label={
+                  <>
+                    <span className="text-slate-500">Reforço</span>
+                    <MesAnoInput
+                      value={r.data}
+                      onChange={(v) =>
+                        setReforcos(reforcos.map((x, j) => (j === i ? { ...x, data: v } : x)))
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setReforcos(reforcos.filter((_, j) => j !== i))}
+                      className="text-red-500 px-1"
+                      title="Remover reforço"
+                    >
+                      ×
+                    </button>
+                  </>
+                }
+              >
                 <MoneyInput
                   value={r.valor}
                   onChange={(v) =>
@@ -253,8 +277,29 @@ export function PropostaConfigurador({
                 />
               </LinhaCond>
             ))}
+            <div className="py-1">
+              <button
+                type="button"
+                onClick={() => setReforcos([...reforcos, { data: null, valor: 0 }])}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                + reforço
+              </button>
+            </div>
 
-            <LinhaCond label={`${numParcelas}× mensais`}>
+            <LinhaCond
+              label={
+                <>
+                  <input
+                    type="number"
+                    value={numParcelas || ""}
+                    onChange={(e) => setNumParcelas(Number(e.target.value) || 0)}
+                    className="inp w-16"
+                  />
+                  <span>× mensais</span>
+                </>
+              }
+            >
               <MoneyInput value={valorParcela} onChange={setValorParcela} className="w-full" />
             </LinhaCond>
 

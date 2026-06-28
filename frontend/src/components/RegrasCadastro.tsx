@@ -88,15 +88,29 @@ export function RegrasCadastro({
             className="inp"
           />
         </Linha>
-        <Linha label="Prazo máximo" sufixo="parcelas">
+        <Linha label="Prazo máximo" sufixo={cfg.prazo_ate_entrega ? "" : "parcelas"}>
           <input
             type="number"
-            disabled={ro}
-            value={cfg.prazo_maximo_meses}
+            disabled={ro || cfg.prazo_ate_entrega}
+            value={cfg.prazo_ate_entrega ? "" : cfg.prazo_maximo_meses}
+            placeholder={cfg.prazo_ate_entrega ? "até a entrega" : ""}
             onChange={(e) => set("prazo_maximo_meses", Number(e.target.value) || 0)}
             className="inp"
           />
         </Linha>
+        <div className="grid grid-cols-[1fr_140px_auto] gap-3">
+          <span />
+          <label className="text-xs text-slate-500 flex items-center gap-1.5 -mt-2">
+            <input
+              type="checkbox"
+              disabled={ro}
+              checked={cfg.prazo_ate_entrega}
+              onChange={(e) => set("prazo_ate_entrega", e.target.checked)}
+            />
+            usar a data de entrega
+          </label>
+          <span />
+        </div>
         <Linha label="Parcela mínima" sufixo="">
           <MoneyInput
             value={cfg.parcela_minima_reais}
