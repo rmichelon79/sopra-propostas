@@ -49,12 +49,30 @@ export function useSalvarCondicoesBase(empId: string) {
 export function useCriarNovaVersao() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ empId, descricao }: { empId: string; descricao: string }) =>
-      api.criarNovaVersao(empId, descricao),
+    mutationFn: ({
+      empId,
+      descricao,
+      sourceTabelaId,
+    }: {
+      empId: string;
+      descricao: string;
+      sourceTabelaId?: string;
+    }) => api.criarNovaVersao(empId, descricao, sourceTabelaId),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["tabela-vigente", v.empId] });
       qc.invalidateQueries({ queryKey: ["tabelas", v.empId] });
       qc.invalidateQueries({ queryKey: ["unidades"] });
+    },
+  });
+}
+
+export function useTornarVigente(empId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tabelaId: string) => api.tornarVigente(empId, tabelaId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tabela-vigente", empId] });
+      qc.invalidateQueries({ queryKey: ["tabelas", empId] });
     },
   });
 }

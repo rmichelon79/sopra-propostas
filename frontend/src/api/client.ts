@@ -96,18 +96,24 @@ export const api = {
     return data as TabelaVenda;
   },
 
-  /** Clona a tabela vigente para uma nova versão (com suas unidades) e a torna vigente. */
-  async criarNovaVersao(empId: string, descricao: string): Promise<TabelaVenda> {
-    const atual = await api.garantirTabelaVigente(empId);
+  /** Clona uma tabela (a `source`, ou a vigente) numa nova versão vigente, com
+   *  unidades e condições pré-preenchidas. */
+  async criarNovaVersao(
+    empId: string,
+    descricao: string,
+    sourceTabelaId?: string,
+  ): Promise<TabelaVenda> {
     const tabelas = await api.listarTabelas(empId);
-    const proxima = Math.max(...tabelas.map((t) => t.versao)) + 1;
-    // desativa a vigente
+    const vigente = tabelas.find((t) => t.vigente) ?? (await api.garantirTabelaVigente(empId));
+    const source = (sourceTabelaId && tabelas.find((t) => t.id === sourceTabelaId)) || vigente;
+    const proxima = Math.max(0, ...tabelas.map((t) => t.versao)) + 1;
+    // desativa a vigente atual
     const off = await supabase
       .from("tabelas_venda")
       .update({ vigente: false })
-      .eq("id", atual.id);
+      .eq("id", vigente.id);
     if (off.error) fail(off.error);
-    // cria a nova versão vigente (copia as condições base da anterior)
+    // cria a nova versão vigente (copia as condições da fonte)
     const { data: nova, error } = await supabase
       .from("tabelas_venda")
       .insert({
@@ -115,17 +121,17 @@ export const api = {
         versao: proxima,
         descricao,
         vigente: true,
-        cond_entrada_pct: atual.cond_entrada_pct,
-        cond_saldo_pct: atual.cond_saldo_pct,
-        cond_num_parcelas: atual.cond_num_parcelas,
-        cond_reforcos: atual.cond_reforcos,
+        cond_entrada_pct: source.cond_entrada_pct,
+        cond_saldo_pct: source.cond_saldo_pct,
+        cond_num_parcelas: source.cond_num_parcelas,
+        cond_reforcos: source.cond_reforcos,
       })
       .select()
       .single();
     if (error) fail(error);
     const novaTabela = nova as TabelaVenda;
-    // clona as unidades da versão anterior
-    const antigas = await api.listarUnidades(atual.id);
+    // clona as unidades da fonte (valores pré-preenchidos)
+    const antigas = await api.listarUnidades(source.id);
     if (antigas.length) {
       const clones = antigas.map((u) => ({
         empreendimento_id: empId,
@@ -141,6 +147,20 @@ export const api = {
       if (ins.error) fail(ins.error);
     }
     return novaTabela;
+  },
+
+  /** Torna uma versão de tabela a vigente (desativa as demais do empreendimento). */
+  async tornarVigente(empId: string, tabelaId: string): Promise<void> {
+    const off = await supabase
+      .from("tabelas_venda")
+      .update({ vigente: false })
+      .eq("empreendimento_id", empId);
+    if (off.error) fail(off.error);
+    const on = await supabase
+      .from("tabelas_venda")
+      .update({ vigente: true })
+      .eq("id", tabelaId);
+    if (on.error) fail(on.error);
   },
 
   async salvarCondicoesBase(

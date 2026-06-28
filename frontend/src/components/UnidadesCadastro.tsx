@@ -3,6 +3,7 @@ import {
   useCriarNovaVersao,
   useTabelaVigente,
   useTabelas,
+  useTornarVigente,
   useUnidades,
 } from "../hooks/useData";
 import { api } from "../api/client";
@@ -51,15 +52,24 @@ export function UnidadesCadastro({
   podeEditar: boolean;
 }) {
   const qc = useQueryClient();
-  const { data: tabela } = useTabelaVigente(empId);
+  const { data: vigente } = useTabelaVigente(empId);
   const { data: tabelas } = useTabelas(empId);
-  const { data: unidades, isLoading } = useUnidades(tabela?.id ?? null);
   const novaVersao = useCriarNovaVersao();
+  const tornarVig = useTornarVigente(empId);
+
+  const [selId, setSelId] = useState<string | null>(null);
+  const tabela = (tabelas ?? []).find((t) => t.id === selId) ?? vigente ?? null;
+  const { data: unidades, isLoading } = useUnidades(tabela?.id ?? null);
 
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [removidos, setRemovidos] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Ao trocar de empreendimento, volta para a versão vigente.
+  useEffect(() => {
+    setSelId(null);
+  }, [empId]);
 
   // Semeia a grade quando as unidades da tabela carregam (ou troca de tabela).
   useEffect(() => {
@@ -107,9 +117,15 @@ export function UnidadesCadastro({
   }
 
   async function criarVersao() {
+    if (!tabela) return;
     const desc = prompt("Descrição da nova versão da tabela (ex.: reajuste jun/2026):", "");
     if (desc === null) return;
-    await novaVersao.mutateAsync({ empId, descricao: desc });
+    const nova = await novaVersao.mutateAsync({
+      empId,
+      descricao: desc,
+      sourceTabelaId: tabela.id, // clona da versão que está sendo vista
+    });
+    setSelId(nova.id);
   }
 
   if (isLoading || !tabela)
@@ -117,24 +133,49 @@ export function UnidadesCadastro({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold">Tabela de unidades</h2>
-          <div className="text-xs text-slate-500">
-            Versão {tabela.versao} (vigente){tabela.descricao ? ` — ${tabela.descricao}` : ""}
-            {tabelas && tabelas.length > 1 && ` · ${tabelas.length} versões`}
-          </div>
+          <select
+            value={tabela.id}
+            onChange={(e) => setSelId(e.target.value)}
+            className="px-2 py-1 text-sm border rounded bg-white"
+          >
+            {(tabelas ?? []).map((t) => (
+              <option key={t.id} value={t.id}>
+                Versão {t.versao}
+                {t.vigente ? " (vigente)" : ""}
+                {t.descricao ? ` — ${t.descricao}` : ""}
+              </option>
+            ))}
+          </select>
         </div>
         {podeEditar && (
-          <button
-            onClick={criarVersao}
-            disabled={novaVersao.isPending}
-            className="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50 disabled:opacity-50"
-          >
-            {novaVersao.isPending ? "Criando…" : "Nova versão"}
-          </button>
+          <div className="flex items-center gap-2">
+            {!tabela.vigente && (
+              <button
+                onClick={() => tornarVig.mutate(tabela.id)}
+                disabled={tornarVig.isPending}
+                className="px-3 py-1.5 text-sm rounded border border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+              >
+                Tornar vigente
+              </button>
+            )}
+            <button
+              onClick={criarVersao}
+              disabled={novaVersao.isPending}
+              className="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {novaVersao.isPending ? "Criando…" : "Nova versão"}
+            </button>
+          </div>
         )}
       </div>
+      {!tabela.vigente && (
+        <div className="mb-3 text-xs text-amber-600">
+          Você está vendo uma versão não vigente. O configurador usa sempre a versão vigente.
+        </div>
+      )}
 
       <CondicoesBase tabela={tabela} cfg={cfg} empId={empId} podeEditar={podeEditar} />
 
