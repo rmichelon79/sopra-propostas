@@ -80,6 +80,7 @@ export interface ConfigVendas {
 export interface Sessao {
   userId: string;
   email: string;
+  nome: string;
   role: string;
   aprovador: boolean; // admin | gestor → cadastra unidades/regras e aprova
 }
@@ -106,8 +107,9 @@ export interface Proposta {
   unidade_id: string;
   empreendimento_id: string;
   vendedor_id: string;
+  vendedor_nome: string | null;
   cliente_nome: string | null;
-  cliente_contato: string | null;
+  cliente_cpf: string | null;
   preco_negociado: number;
   config: PropostaConfigJson;
   vpl_calculado: number | null;
@@ -125,8 +127,9 @@ export interface PropostaInput {
   unidade_id: string;
   empreendimento_id: string;
   vendedor_id: string;
+  vendedor_nome: string | null;
   cliente_nome: string | null;
-  cliente_contato: string | null;
+  cliente_cpf: string | null;
   preco_negociado: number;
   config: PropostaConfigJson;
   vpl_calculado: number;

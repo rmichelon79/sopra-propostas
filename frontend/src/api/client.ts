@@ -37,13 +37,15 @@ export const api = {
     if (!user) throw new Error("Sem sessão.");
     const { data: prof } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role,nome")
       .eq("id", user.id)
       .maybeSingle();
-    const role = (prof as { role?: string } | null)?.role ?? "viewer";
+    const p = prof as { role?: string; nome?: string } | null;
+    const role = p?.role ?? "viewer";
     return {
       userId: user.id,
       email: user.email ?? "",
+      nome: p?.nome ?? user.email ?? "",
       role,
       aprovador: role === "admin" || role === "gestor",
     };

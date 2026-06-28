@@ -41,7 +41,8 @@ export function PropostaConfigurador({
 
   const [unidadeId, setUnidadeId] = useState(inicial?.unidade_id ?? "");
   const [cliente, setCliente] = useState(inicial?.cliente_nome ?? "");
-  const [contato, setContato] = useState(inicial?.cliente_contato ?? "");
+  const [cpf, setCpf] = useState(inicial?.cliente_cpf ?? "");
+  const [vendedor, setVendedor] = useState(inicial?.vendedor_nome ?? sessao.nome);
   const dataBase = hojeMes(); // VPL calculado na data atual
   const [entrada, setEntrada] = useState(inicial?.config.entrada ?? 0);
   const [numParcelas, setNumParcelas] = useState(inicial?.config.num_parcelas ?? 0);
@@ -168,8 +169,9 @@ export function PropostaConfigurador({
         unidade_id: unidade.id,
         empreendimento_id: empId,
         vendedor_id: sessao.userId,
+        vendedor_nome: vendedor || null,
         cliente_nome: cliente || null,
-        cliente_contato: contato || null,
+        cliente_cpf: cpf || null,
         preco_negociado: precoNegociavel,
         config: montarConfig(),
         vpl_calculado: av.vpl,
@@ -201,10 +203,13 @@ export function PropostaConfigurador({
           <Campo label="Cliente">
             <input value={cliente} onChange={(e) => setCliente(e.target.value)} className="inp" />
           </Campo>
-          <Campo label="Contato">
-            <input value={contato} onChange={(e) => setContato(e.target.value)} className="inp" />
+          <Campo label="CPF do cliente">
+            <input value={cpf} onChange={(e) => setCpf(e.target.value)} className="inp" />
           </Campo>
         </div>
+        <Campo label="Vendedor">
+          <input value={vendedor} onChange={(e) => setVendedor(e.target.value)} className="inp" />
+        </Campo>
       </section>
 
       {unidade && base && (
