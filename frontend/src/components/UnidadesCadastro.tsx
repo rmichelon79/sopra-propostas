@@ -8,6 +8,7 @@ import {
 import { api } from "../api/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Unidade, UnidadeStatus } from "../types";
+import { MoneyInput } from "./inputs";
 
 interface Linha {
   key: string;
@@ -176,12 +177,10 @@ export function UnidadesCadastro({
                   />
                 </td>
                 <td className="px-2 py-1">
-                  <input
-                    type="number"
+                  <MoneyInput
                     disabled={!podeEditar}
-                    value={l.preco_tabela}
-                    onChange={(e) => set(l.key, "preco_tabela", e.target.value)}
-                    className="inp text-right"
+                    value={Number(l.preco_tabela) || 0}
+                    onChange={(v) => set(l.key, "preco_tabela", String(v))}
                   />
                 </td>
                 <td className="px-2 py-1">

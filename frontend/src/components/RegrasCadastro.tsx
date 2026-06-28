@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useConfigVendas, useSalvarConfig } from "../hooks/useData";
 import { DEFAULT_CONFIG } from "../api/client";
 import type { AcaoForaRegra, ConfigVendas } from "../types";
+import { MesAnoInput, MoneyInput } from "./inputs";
 
 export function RegrasCadastro({
   empId,
@@ -35,9 +36,6 @@ export function RegrasCadastro({
 
   const ro = !podeEditar;
 
-  const mesValue = (iso: string | null) => (iso ? iso.slice(0, 7) : "");
-  const mesToIso = (v: string): string | null => (v ? `${v}-01` : null);
-
   return (
     <form onSubmit={submeter} className="max-w-lg">
       <h2 className="text-base font-semibold mb-1">Configuração do empreendimento</h2>
@@ -49,23 +47,15 @@ export function RegrasCadastro({
       <div className="grid grid-cols-2 gap-3 mb-5">
         <label className="block">
           <span className="block text-xs text-slate-500 mb-1">Início das vendas</span>
-          <input
-            type="month"
+          <MesAnoInput
+            value={cfg.inicio_vendas}
             disabled={ro}
-            value={mesValue(cfg.inicio_vendas)}
-            onChange={(e) => set("inicio_vendas", mesToIso(e.target.value))}
-            className="inp"
+            onChange={(v) => set("inicio_vendas", v)}
           />
         </label>
         <label className="block">
           <span className="block text-xs text-slate-500 mb-1">Entrega</span>
-          <input
-            type="month"
-            disabled={ro}
-            value={mesValue(cfg.entrega)}
-            onChange={(e) => set("entrega", mesToIso(e.target.value))}
-            className="inp"
-          />
+          <MesAnoInput value={cfg.entrega} disabled={ro} onChange={(v) => set("entrega", v)} />
         </label>
       </div>
 
@@ -107,13 +97,11 @@ export function RegrasCadastro({
             className="inp"
           />
         </Linha>
-        <Linha label="Parcela mínima" sufixo="R$">
-          <input
-            type="number"
-            disabled={ro}
+        <Linha label="Parcela mínima" sufixo="">
+          <MoneyInput
             value={cfg.parcela_minima_reais}
-            onChange={(e) => set("parcela_minima_reais", Number(e.target.value) || 0)}
-            className="inp"
+            disabled={ro}
+            onChange={(v) => set("parcela_minima_reais", v)}
           />
         </Linha>
         <Linha label="VPL piso" sufixo="% do preço à vista">

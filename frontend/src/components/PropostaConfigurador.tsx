@@ -4,6 +4,7 @@ import type { ConfigVendas, Proposta, PropostaConfigJson, Sessao, Unidade } from
 import { avaliarProposta } from "../lib/vpl";
 import { brl } from "../lib/format";
 import { fmtMesAno, hojeMes, mesesEntre } from "../lib/datas";
+import { MesAnoInput, MoneyInput } from "./inputs";
 
 const STATUS_UI = {
   aprovavel: { cor: "bg-green-100 text-green-800 border-green-300", txt: "Dentro das regras" },
@@ -178,12 +179,7 @@ export function PropostaConfigurador({
             </div>
             <div className="text-right">
               <Campo label="Preço negociado">
-                <input
-                  type="number"
-                  value={preco || ""}
-                  onChange={(e) => setPreco(Number(e.target.value) || 0)}
-                  className="inp w-44 text-right"
-                />
+                <MoneyInput value={preco} onChange={setPreco} className="w-44" />
               </Campo>
             </div>
           </div>
@@ -191,21 +187,11 @@ export function PropostaConfigurador({
           {/* Plano de pagamento */}
           <section className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Campo label={`Entrada (R$) — ${entradaPct.toFixed(1)}% do preço`}>
-                <input
-                  type="number"
-                  value={entradaValor || ""}
-                  onChange={(e) => setEntradaValor(Number(e.target.value) || 0)}
-                  className="inp"
-                />
+              <Campo label={`Entrada — ${entradaPct.toFixed(1)}% do preço`}>
+                <MoneyInput value={entradaValor} onChange={setEntradaValor} />
               </Campo>
               <Campo label="Data-base">
-                <input
-                  type="month"
-                  value={dataBase.slice(0, 7)}
-                  onChange={(e) => setDataBase(`${e.target.value}-01`)}
-                  className="inp"
-                />
+                <MesAnoInput value={dataBase} onChange={(v) => setDataBase(v ?? hojeMes())} />
               </Campo>
             </div>
 
@@ -247,15 +233,14 @@ export function PropostaConfigurador({
                     }
                     className="inp w-20"
                   />
-                  <span className="text-xs text-slate-400">R$</span>
-                  <input
-                    type="number"
-                    value={r.valor || ""}
-                    onChange={(e) =>
-                      setReforcos(reforcos.map((x, j) => (j === i ? { ...x, valor: Number(e.target.value) || 0 } : x)))
-                    }
-                    className="inp flex-1"
-                  />
+                  <div className="flex-1">
+                    <MoneyInput
+                      value={r.valor}
+                      onChange={(v) =>
+                        setReforcos(reforcos.map((x, j) => (j === i ? { ...x, valor: v } : x)))
+                      }
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => setReforcos(reforcos.filter((_, j) => j !== i))}
@@ -271,16 +256,11 @@ export function PropostaConfigurador({
             <Campo
               label={
                 cfg.entrega
-                  ? `Saldo na entrega (R$) — entrega ${fmtMesAno(cfg.entrega)}, mês ${mesEntrega}`
-                  : "Saldo na entrega (R$) — defina a data de entrega no empreendimento"
+                  ? `Saldo na entrega — entrega ${fmtMesAno(cfg.entrega)}, mês ${mesEntrega}`
+                  : "Saldo na entrega — defina a data de entrega no empreendimento"
               }
             >
-              <input
-                type="number"
-                value={saldoEntrega || ""}
-                onChange={(e) => setSaldoEntrega(Number(e.target.value) || 0)}
-                className="inp"
-              />
+              <MoneyInput value={saldoEntrega} onChange={setSaldoEntrega} />
             </Campo>
           </section>
 
