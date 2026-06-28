@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .inp {
+    @apply w-full px-3 py-2 border border-slate-300 rounded outline-none focus:border-blue-500;
+  }
+}
+
 html,
 body,
 #root {
