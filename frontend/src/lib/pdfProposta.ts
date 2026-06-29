@@ -27,9 +27,9 @@ export function gerarPropostaPDF(p: Proposta) {
   * { box-sizing: border-box; }
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; margin: 0; padding: 40px; }
   .wrap { max-width: 720px; margin: 0 auto; }
-  .top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1f2937; padding-bottom: 14px; margin-bottom: 24px; }
-  .brand .name { font-size: 20px; font-weight: 700; }
-  .brand .tag { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #6b7280; }
+  .top { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #4a443d; padding-bottom: 16px; margin-bottom: 24px; }
+  .logo-main { font-size: 38px; font-weight: 300; letter-spacing: 14px; color: #4a443d; line-height: 1; }
+  .logo-sub { font-size: 12px; font-weight: 400; letter-spacing: 9px; color: #4a443d; margin-top: 6px; padding-left: 3px; }
   .doc { text-align: right; font-size: 12px; color: #6b7280; }
   .doc b { display: block; font-size: 16px; color: #1f2937; }
   h1 { font-size: 18px; margin: 0 0 18px; }
@@ -51,8 +51,8 @@ export function gerarPropostaPDF(p: Proposta) {
 </style></head>
 <body><div class="wrap">
   <div class="top">
-    <div class="brand"><div class="tag">Sopra Incorporações</div><div class="name">Proposta Comercial</div></div>
-    <div class="doc"><b>${esc(emp)} · ${esc(unidade)}</b>${data ? "Emitida em " + esc(data) : ""}</div>
+    <div class="logo"><div class="logo-main">SOPRA</div><div class="logo-sub">INCORPORADORA</div></div>
+    <div class="doc"><b>Proposta Comercial</b>${esc(emp)} · ${esc(unidade)}${data ? "<br>Emitida em " + esc(data) : ""}</div>
   </div>
 
   <div class="info">
@@ -79,8 +79,8 @@ export function gerarPropostaPDF(p: Proposta) {
   </table>
 
   <div class="ass">
-    <div>Cliente</div>
-    <div>Sopra Incorporações</div>
+    <div>${esc(p.cliente_nome ?? "")}<br>Cliente</div>
+    <div>${esc(p.vendedor_nome ?? "")}<br>Vendedor</div>
   </div>
 
   <p class="nota">Proposta sujeita à análise e aprovação. Valores em reais (R$). Documento gerado pela Plataforma Sopra.</p>
