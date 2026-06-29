@@ -1,5 +1,5 @@
 import { useMudarStatusProposta, usePropostas } from "../hooks/useData";
-import type { Proposta, PropostaStatus } from "../types";
+import type { Proposta, PropostaStatus, Sessao } from "../types";
 import { brl } from "../lib/format";
 import { gerarPropostaPDF } from "../lib/pdfProposta";
 
@@ -11,14 +11,27 @@ const STATUS_BADGE: Record<PropostaStatus, { txt: string; cls: string }> = {
   expirada: { txt: "Expirada", cls: "bg-slate-100 text-slate-400" },
 };
 
-export function PropostasList({ onEditar }: { onEditar: (p: Proposta) => void }) {
-  const { data: propostas, isLoading } = usePropostas();
+export function PropostasList({
+  sessao,
+  onEditar,
+}: {
+  sessao: Sessao;
+  onEditar: (p: Proposta) => void;
+}) {
+  const { data: todas, isLoading } = usePropostas();
   const mudarStatus = useMudarStatusProposta();
+
+  // Gestor/admin veem todas; vendedor (papel viewer) só as próprias.
+  // Mesmo critério da RLS do banco (role admin/gestor), para casar com o que vem.
+  const vejaTodas = sessao.role === "admin" || sessao.role === "gestor";
+  const propostas = (todas ?? []).filter(
+    (p) => vejaTodas || p.vendedor_id === sessao.userId,
+  );
 
   if (isLoading)
     return <div className="text-sm text-slate-400 py-12 text-center">Carregando…</div>;
 
-  if (!propostas?.length)
+  if (!propostas.length)
     return (
       <div className="text-sm text-slate-400 py-12 text-center border border-dashed rounded">
         Nenhuma proposta ainda. Use a aba <b>Nova proposta</b> para criar a primeira.

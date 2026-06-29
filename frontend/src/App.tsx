@@ -123,7 +123,7 @@ export default function App() {
             }}
           />
         ) : aba === "propostas" ? (
-          <PropostasList onEditar={abrirParaEditar} />
+          <PropostasList sessao={sessao} onEditar={abrirParaEditar} />
         ) : aba === "aprovacoes" ? (
           <Aprovacoes sessao={sessao} />
         ) : aba === "unidades" ? (

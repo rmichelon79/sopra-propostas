@@ -59,9 +59,10 @@ function ReviewCard({ p, sessao }: { p: Proposta; sessao: Sessao }) {
             {p.unidades?.identificador ?? "unidade"}
           </div>
           <div className="text-sm text-slate-500">
-            {p.cliente_nome || "—"}
-            {p.cliente_cpf ? ` · ${p.cliente_cpf}` : ""} · vendedor {p.vendedor_nome || "—"}
+            Cliente: {p.cliente_nome || "—"}
+            {p.cliente_cpf ? ` · ${p.cliente_cpf}` : ""}
           </div>
+          <div className="text-sm text-slate-500">Vendedor: {p.vendedor_nome || "—"}</div>
         </div>
         <div
           className={`rounded-lg border px-3 py-2 text-right ${
