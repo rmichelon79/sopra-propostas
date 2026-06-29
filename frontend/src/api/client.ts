@@ -243,7 +243,9 @@ export const api = {
   async listarPropostas(): Promise<Proposta[]> {
     const { data, error } = await supabase
       .from("propostas")
-      .select("*, unidades(identificador), empreendimentos(codigo)")
+      .select(
+        "*, unidades(identificador, preco_tabela, tabelas_venda(cond_entrada_pct,cond_saldo_pct,cond_num_parcelas,cond_reforcos)), empreendimentos(codigo)",
+      )
       .order("atualizado_em", { ascending: false });
     if (error) fail(error);
     return (data ?? []) as Proposta[];

@@ -4,6 +4,7 @@ import type { Proposta, Sessao } from "../types";
 import { brl } from "../lib/format";
 import { fmtMesAno, mesesEntre } from "../lib/datas";
 import { calcularVpl } from "../lib/vpl";
+import { materializarBase, totalCondicao } from "../lib/condicao";
 import { LinhaCond, MesAnoInput, MoneyInput } from "./inputs";
 
 export function Aprovacoes({ sessao }: { sessao: Sessao }) {
@@ -40,6 +41,9 @@ function ReviewCard({ p, sessao }: { p: Proposta; sessao: Sessao }) {
   const abaixo = vpl < piso;
   const pct = piso > 0 ? (vpl / piso) * 100 : 0;
 
+  const u = p.unidades;
+  const base = u?.tabelas_venda ? materializarBase(u.preco_tabela, u.tabelas_venda) : null;
+
   function decide(decisao: "aprovada" | "rejeitada") {
     decidir.mutate({ propostaId: p.id, aprovadorId: sessao.userId, decisao, comentario });
   }
@@ -73,23 +77,46 @@ function ReviewCard({ p, sessao }: { p: Proposta; sessao: Sessao }) {
         </div>
       </div>
 
-      {/* Condições da proposta */}
-      <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-2 mb-3">
-        <LinhaCond label="Entrada">{brl(p.config.entrada)}</LinhaCond>
-        {(p.config.reforcos ?? []).map((r, i) => (
-          <LinhaCond key={i} label={`Reforço ${fmtMesAno(r.data)}`}>
-            {brl(r.valor)}
-          </LinhaCond>
-        ))}
-        <LinhaCond label={`${p.config.num_parcelas}× mensais`}>
-          {brl(p.config.valor_parcela)}
-        </LinhaCond>
-        {p.config.repasse && (
-          <LinhaCond label="Saldo na entrega">{brl(p.config.repasse.valor)}</LinhaCond>
+      {/* Tabela base (referência) × Proposta */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        {base && (
+          <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-2">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+              Tabela base
+            </div>
+            <LinhaCond label="Entrada">{brl(base.entrada)}</LinhaCond>
+            {base.reforcos.map((r, i) => (
+              <LinhaCond key={i} label={`Reforço ${fmtMesAno(r.data)}`}>
+                {brl(r.valor)}
+              </LinhaCond>
+            ))}
+            <LinhaCond label={`${base.numParcelas}× mensais`}>{brl(base.valorParcela)}</LinhaCond>
+            {base.saldo > 0 && <LinhaCond label="Saldo na entrega">{brl(base.saldo)}</LinhaCond>}
+            <LinhaCond label="Total" total>
+              {brl(totalCondicao(base))}
+            </LinhaCond>
+          </div>
         )}
-        <LinhaCond label="Total da proposta" total>
-          {brl(p.preco_negociado)}
-        </LinhaCond>
+        <div className="rounded-lg bg-white border border-blue-200 px-4 py-2">
+          <div className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide mb-1">
+            Proposta
+          </div>
+          <LinhaCond label="Entrada">{brl(p.config.entrada)}</LinhaCond>
+          {(p.config.reforcos ?? []).map((r, i) => (
+            <LinhaCond key={i} label={`Reforço ${fmtMesAno(r.data)}`}>
+              {brl(r.valor)}
+            </LinhaCond>
+          ))}
+          <LinhaCond label={`${p.config.num_parcelas}× mensais`}>
+            {brl(p.config.valor_parcela)}
+          </LinhaCond>
+          {p.config.repasse && (
+            <LinhaCond label="Saldo na entrega">{brl(p.config.repasse.valor)}</LinhaCond>
+          )}
+          <LinhaCond label="Total da proposta" total>
+            {brl(p.preco_negociado)}
+          </LinhaCond>
+        </div>
       </div>
 
       {/* Simulador de pagamento (não altera a proposta; ajuda a responder) */}

@@ -1,7 +1,12 @@
 import type { CondicaoMaterializada, TabelaVenda } from "../types";
 
+type CondBase = Pick<
+  TabelaVenda,
+  "cond_entrada_pct" | "cond_saldo_pct" | "cond_num_parcelas" | "cond_reforcos"
+>;
+
 /** Materializa a condição base (% do valor) em R$ para um valor de unidade. */
-export function materializarBase(valor: number, t: TabelaVenda): CondicaoMaterializada {
+export function materializarBase(valor: number, t: CondBase): CondicaoMaterializada {
   const entrada = Math.round((valor * t.cond_entrada_pct) / 100);
   const saldo = Math.round((valor * t.cond_saldo_pct) / 100);
   const reforcos = (t.cond_reforcos ?? []).map((r) => ({

@@ -120,7 +120,16 @@ export interface Proposta {
   criado_em: string;
   atualizado_em: string;
   // Campos embutidos (read-only) trazidos pela consulta da lista.
-  unidades?: { identificador: string } | null;
+  unidades?: {
+    identificador: string;
+    preco_tabela: number;
+    tabelas_venda: {
+      cond_entrada_pct: number;
+      cond_saldo_pct: number;
+      cond_num_parcelas: number;
+      cond_reforcos: ReforcoBasePct[];
+    } | null;
+  } | null;
   empreendimentos?: { codigo: string } | null;
 }
 
