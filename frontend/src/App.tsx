@@ -131,6 +131,8 @@ export default function App() {
           podeEditar ? (
             <UnidadesCadastro
               empId={empId}
+              empCodigo={emps?.find((e) => e.id === empId)?.codigo ?? ""}
+              empNome={emps?.find((e) => e.id === empId)?.nome ?? ""}
               cfg={cfg}
               podeEditar={podeEditar}
               isAdmin={sessao.role === "admin"}

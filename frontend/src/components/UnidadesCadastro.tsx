@@ -12,6 +12,7 @@ import { api } from "../api/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ConfigVendas, Unidade, UnidadeStatus } from "../types";
 import { fmtMesAno } from "../lib/datas";
+import { gerarTabelaPDF } from "../lib/pdfTabela";
 import { MesAnoInput, MoneyInput } from "./inputs";
 import { CondicoesBase } from "./CondicoesBase";
 
@@ -47,11 +48,15 @@ const paraLinha = (u: Unidade): Linha => ({
 
 export function UnidadesCadastro({
   empId,
+  empCodigo,
+  empNome,
   cfg,
   podeEditar,
   isAdmin,
 }: {
   empId: string;
+  empCodigo: string;
+  empNome: string;
   cfg: ConfigVendas;
   podeEditar: boolean;
   isAdmin: boolean;
@@ -168,6 +173,14 @@ export function UnidadesCadastro({
         </div>
         {podeEditar && (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() =>
+                gerarTabelaPDF({ empCodigo, empNome, tabela, unidades: unidades ?? [] })
+              }
+              className="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50"
+            >
+              Exportar PDF
+            </button>
             {!tabela.vigente && (
               <button
                 onClick={() => tornarVig.mutate(tabela.id)}
