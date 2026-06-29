@@ -175,7 +175,13 @@ export function UnidadesCadastro({
           <div className="flex items-center gap-2">
             <button
               onClick={() =>
-                gerarTabelaPDF({ empCodigo, empNome, tabela, unidades: unidades ?? [] })
+                gerarTabelaPDF({
+                  empCodigo,
+                  empNome,
+                  entrega: cfg.entrega,
+                  tabela,
+                  unidades: unidades ?? [],
+                })
               }
               className="px-3 py-1.5 text-sm rounded border border-slate-300 hover:bg-slate-50"
             >

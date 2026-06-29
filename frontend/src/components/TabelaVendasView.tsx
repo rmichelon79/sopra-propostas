@@ -1,5 +1,5 @@
 import { useTabelaVigente, useUnidades } from "../hooks/useData";
-import type { UnidadeStatus } from "../types";
+import type { ConfigVendas, UnidadeStatus } from "../types";
 import { brl } from "../lib/format";
 import { fmtMesAno } from "../lib/datas";
 
@@ -15,12 +15,15 @@ const STATUS_CLS: Record<UnidadeStatus, string> = {
 };
 
 /** Visão só-leitura da tabela de vendas vigente — para o vendedor consultar. */
-export function TabelaVendasView({ empId }: { empId: string }) {
+export function TabelaVendasView({ empId, cfg }: { empId: string; cfg: ConfigVendas }) {
   const { data: tabela } = useTabelaVigente(empId);
   const { data: unidades, isLoading } = useUnidades(tabela?.id ?? null);
 
   if (isLoading || !tabela)
     return <div className="text-sm text-slate-400 py-8 text-center">Carregando…</div>;
+
+  const somaRef = (tabela.cond_reforcos ?? []).reduce((s, r) => s + r.pct, 0);
+  const mensaisPct = 100 - tabela.cond_entrada_pct - tabela.cond_saldo_pct - somaRef;
 
   return (
     <div className="space-y-5">
@@ -29,6 +32,7 @@ export function TabelaVendasView({ empId }: { empId: string }) {
         <div className="text-xs text-slate-500">
           Versão {tabela.versao}
           {tabela.data ? ` · ${fmtMesAno(tabela.data)}` : ""}
+          {cfg.entrega ? ` · entrega ${fmtMesAno(cfg.entrega)}` : ""}
         </div>
       </div>
 
@@ -42,7 +46,7 @@ export function TabelaVendasView({ empId }: { empId: string }) {
           {(tabela.cond_reforcos ?? []).map((r, i) => (
             <Linha key={i} rotulo={`Reforço ${fmtMesAno(r.data)}`} valor={`${num(r.pct)}%`} />
           ))}
-          <Linha rotulo="Mensais" valor={`${tabela.cond_num_parcelas}×`} />
+          <Linha rotulo={`${tabela.cond_num_parcelas}× mensais`} valor={`${num(mensaisPct)}%`} />
           <Linha rotulo="Saldo na entrega" valor={`${num(tabela.cond_saldo_pct)}%`} />
         </div>
       </section>

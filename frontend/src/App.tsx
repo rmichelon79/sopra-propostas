@@ -138,7 +138,7 @@ export default function App() {
               isAdmin={sessao.role === "admin"}
             />
           ) : (
-            <TabelaVendasView empId={empId} />
+            <TabelaVendasView empId={empId} cfg={cfg} />
           )
         ) : (
           <RegrasCadastro empId={empId} podeEditar={podeEditar} />

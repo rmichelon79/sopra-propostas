@@ -18,17 +18,21 @@ const STATUS: Record<UnidadeStatus, string> = {
 export function gerarTabelaPDF(args: {
   empCodigo: string;
   empNome: string;
+  entrega: string | null;
   tabela: TabelaVenda;
   unidades: Unidade[];
 }) {
-  const { empCodigo, empNome, tabela, unidades } = args;
+  const { empCodigo, empNome, entrega, tabela, unidades } = args;
   const disp = unidades.filter((u) => u.status === "disponivel").length;
+  const somaRef = (tabela.cond_reforcos ?? []).reduce((s, r) => s + r.pct, 0);
+  const mensaisPct = 100 - tabela.cond_entrada_pct - tabela.cond_saldo_pct - somaRef;
 
   const cond: string[] = [];
   cond.push(condLinha("Entrada", `${num(tabela.cond_entrada_pct)}%`));
   for (const r of tabela.cond_reforcos ?? [])
     cond.push(condLinha(`Reforço ${fmtMesAno(r.data)}`, `${num(r.pct)}%`));
-  if (tabela.cond_num_parcelas > 0) cond.push(condLinha("Mensais", `${tabela.cond_num_parcelas}×`));
+  if (tabela.cond_num_parcelas > 0)
+    cond.push(condLinha(`${tabela.cond_num_parcelas}× mensais`, `${num(mensaisPct)}%`));
   cond.push(condLinha("Saldo na entrega", `${num(tabela.cond_saldo_pct)}%`));
 
   const linhas = unidades
@@ -72,7 +76,7 @@ export function gerarTabelaPDF(args: {
   </div>
 
   <h1>${esc(empCodigo)} — ${esc(empNome)}</h1>
-  <div class="meta">${unidades.length} unidades · ${disp} disponíveis</div>
+  <div class="meta">${unidades.length} unidades · ${disp} disponíveis${entrega ? " · entrega " + esc(fmtMesAno(entrega)) : ""}</div>
 
   <div class="cond">${cond.join("")}</div>
 
