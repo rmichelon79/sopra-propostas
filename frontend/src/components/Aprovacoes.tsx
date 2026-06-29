@@ -95,6 +95,9 @@ function ReviewCard({ p, sessao }: { p: Proposta; sessao: Sessao }) {
             <LinhaCond label="Total" total>
               {brl(totalCondicao(base))}
             </LinhaCond>
+            <LinhaCond label="VPL da base">
+              <b>{brl(piso)}</b>
+            </LinhaCond>
           </div>
         )}
         <div className="rounded-lg bg-white border border-blue-200 px-4 py-2">
@@ -115,6 +118,9 @@ function ReviewCard({ p, sessao }: { p: Proposta; sessao: Sessao }) {
           )}
           <LinhaCond label="Total da proposta" total>
             {brl(p.preco_negociado)}
+          </LinhaCond>
+          <LinhaCond label="VPL da proposta">
+            <b className={abaixo ? "text-amber-700" : "text-green-700"}>{brl(vpl)}</b>
           </LinhaCond>
         </div>
       </div>
