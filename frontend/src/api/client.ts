@@ -280,6 +280,11 @@ export const api = {
     if (error) fail(error);
   },
 
+  async excluirProposta(id: string): Promise<void> {
+    const { error } = await supabase.from("propostas").delete().eq("id", id);
+    if (error) fail(error);
+  },
+
   // ─── Aprovações (alçadas) ───────────────────────────────────────────────────
   async listarAprovacoes(propostaId: string): Promise<Aprovacao[]> {
     const { data, error } = await supabase

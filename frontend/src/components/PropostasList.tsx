@@ -1,4 +1,4 @@
-import { useMudarStatusProposta, usePropostas } from "../hooks/useData";
+import { useExcluirProposta, useMudarStatusProposta, usePropostas } from "../hooks/useData";
 import type { Proposta, PropostaStatus, Sessao } from "../types";
 import { brl } from "../lib/format";
 import { gerarPropostaPDF } from "../lib/pdfProposta";
@@ -20,6 +20,7 @@ export function PropostasList({
 }) {
   const { data: todas, isLoading } = usePropostas();
   const mudarStatus = useMudarStatusProposta();
+  const excluir = useExcluirProposta();
 
   // Gestor/admin veem todas; vendedor (papel viewer) só as próprias.
   // Mesmo critério da RLS do banco (role admin/gestor), para casar com o que vem.
@@ -101,6 +102,17 @@ export function PropostasList({
                   <button onClick={() => gerarPropostaPDF(p)} className="text-blue-600 hover:underline">
                     PDF
                   </button>
+                  {(p.vendedor_id === sessao.userId || sessao.role === "admin") && (
+                    <button
+                      onClick={() => {
+                        if (confirm("Excluir esta proposta? Esta ação não pode ser desfeita."))
+                          excluir.mutate(p.id);
+                      }}
+                      className="text-red-600 hover:underline ml-3"
+                    >
+                      Excluir
+                    </button>
+                  )}
                 </td>
               </tr>
             );

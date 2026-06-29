@@ -153,6 +153,14 @@ export function useMudarStatusProposta() {
   });
 }
 
+export function useExcluirProposta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.excluirProposta(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["propostas"] }),
+  });
+}
+
 export const useAprovacoes = (propostaId: string | null) =>
   useQuery({
     queryKey: ["aprovacoes", propostaId],
