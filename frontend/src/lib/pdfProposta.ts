@@ -1,6 +1,7 @@
 import type { Proposta } from "../types";
 import { brl } from "./format";
 import { fmtMesAno } from "./datas";
+import { LOGO_SOPRA } from "./logoSopra";
 
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -28,8 +29,7 @@ export function gerarPropostaPDF(p: Proposta) {
   body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; margin: 0; padding: 40px; }
   .wrap { max-width: 720px; margin: 0 auto; }
   .top { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #4a443d; padding-bottom: 16px; margin-bottom: 24px; }
-  .logo-main { font-size: 38px; font-weight: 300; letter-spacing: 14px; color: #4a443d; line-height: 1; }
-  .logo-sub { font-size: 12px; font-weight: 400; letter-spacing: 9px; color: #4a443d; margin-top: 6px; padding-left: 3px; }
+  .logo-img { height: 46px; width: auto; display: block; }
   .doc { text-align: right; font-size: 12px; color: #6b7280; }
   .doc b { display: block; font-size: 16px; color: #1f2937; }
   h1 { font-size: 18px; margin: 0 0 18px; }
@@ -51,7 +51,7 @@ export function gerarPropostaPDF(p: Proposta) {
 </style></head>
 <body><div class="wrap">
   <div class="top">
-    <div class="logo"><div class="logo-main">SOPRA</div><div class="logo-sub">INCORPORADORA</div></div>
+    <img class="logo-img" src="${LOGO_SOPRA}" alt="Sopra Incorporadora">
     <div class="doc"><b>Proposta Comercial</b>${esc(emp)} · ${esc(unidade)}${data ? "<br>Emitida em " + esc(data) : ""}</div>
   </div>
 
