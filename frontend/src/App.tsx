@@ -14,7 +14,7 @@ const LABEL: Record<Aba, string> = {
   nova: "Nova proposta",
   propostas: "Propostas",
   aprovacoes: "Aprovações",
-  unidades: "Unidades",
+  unidades: "Tabela de vendas",
   regras: "Empreendimento",
 };
 
