@@ -6,6 +6,7 @@ import { UnidadesCadastro } from "./components/UnidadesCadastro";
 import { RegrasCadastro } from "./components/RegrasCadastro";
 import { PropostaConfigurador } from "./components/PropostaConfigurador";
 import { PropostasList } from "./components/PropostasList";
+import { TabelaVendasView } from "./components/TabelaVendasView";
 import { Aprovacoes } from "./components/Aprovacoes";
 import type { Proposta } from "./types";
 
@@ -36,7 +37,7 @@ export default function App() {
   const pendentes = (propostas ?? []).filter((p) => p.status === "em_aprovacao").length;
   const abas: Aba[] = podeEditar
     ? ["nova", "propostas", "aprovacoes", "unidades", "regras"]
-    : ["nova", "propostas"];
+    : ["nova", "propostas", "unidades"];
 
   function trocarAba(a: Aba) {
     if (a !== "nova") setEditando(null);
@@ -127,12 +128,16 @@ export default function App() {
         ) : aba === "aprovacoes" ? (
           <Aprovacoes sessao={sessao} />
         ) : aba === "unidades" ? (
-          <UnidadesCadastro
-            empId={empId}
-            cfg={cfg}
-            podeEditar={podeEditar}
-            isAdmin={sessao.role === "admin"}
-          />
+          podeEditar ? (
+            <UnidadesCadastro
+              empId={empId}
+              cfg={cfg}
+              podeEditar={podeEditar}
+              isAdmin={sessao.role === "admin"}
+            />
+          ) : (
+            <TabelaVendasView empId={empId} />
+          )
         ) : (
           <RegrasCadastro empId={empId} podeEditar={podeEditar} />
         )}
