@@ -1,6 +1,7 @@
 import { useMudarStatusProposta, usePropostas } from "../hooks/useData";
 import type { Proposta, PropostaStatus } from "../types";
 import { brl } from "../lib/format";
+import { gerarPropostaPDF } from "../lib/pdfProposta";
 
 const STATUS_BADGE: Record<PropostaStatus, { txt: string; cls: string }> = {
   rascunho: { txt: "Rascunho", cls: "bg-slate-100 text-slate-600" },
@@ -79,11 +80,14 @@ export function PropostasList({ onEditar }: { onEditar: (p: Proposta) => void })
                         if (confirm("Voltar esta proposta para rascunho?"))
                           mudarStatus.mutate({ id: p.id, status: "rascunho" });
                       }}
-                      className="text-slate-500 hover:underline"
+                      className="text-slate-500 hover:underline mr-3"
                     >
                       Reabrir
                     </button>
                   )}
+                  <button onClick={() => gerarPropostaPDF(p)} className="text-blue-600 hover:underline">
+                    PDF
+                  </button>
                 </td>
               </tr>
             );
